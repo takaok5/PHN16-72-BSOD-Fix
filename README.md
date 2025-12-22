@@ -43,14 +43,14 @@ C:\Users\TUONOME\Downloads\AcerDrivers_PHN16-72\
 |--------|------|
 | ✅ Chipset Intel | Serial IO, I2C |
 | ✅ ME | Intel Management Engine |
-| ✅ DPTF | ⚠️ **NO APO!** Versione 11401 |
-| ✅ VGA Intel UMA | Grafica integrata |
+| ✅ DPTF | ⚠️ **SENZA APO!** Versione 11401 |
+| ⚠️ VGA Intel UMA | **Installazione manuale** (lo script ti guida) |
 | ✅ Audio Realtek | |
-| ✅ LAN | ⚠️ **NO Killer Control Centre!** E3100G |
-| ✅ Wireless LAN | ⚠️ **NO 1675i!** |
+| ✅ LAN | **SENZA Killer Control Centre!** E3100G |
+| ✅ Wireless LAN | **SENZA 1675i!** |
 | ✅ Bluetooth | Se necessario |
-| ❌ GNA | ⚠️ **NON scaricare!** |
-| ❌ HID Event Filter | ⚠️ **NON scaricare!** |
+| ❌ GNA | **NON scaricare!** |
+| ❌ HID Event Filter | **NON scaricare!** |
 
 > ⚠️ **IMPORTANTE:** Non scaricare DPTF (APO)! La versione APO richiede DTT 11405+ che causa BSOD.
 
@@ -70,8 +70,9 @@ Lo script:
 3. Blocca Windows Update per questi driver
 4. Pulisce driver esistenti
 5. Installa nuovi driver nell'ordine corretto
-6. Ti chiede di installare NVIDIA al momento giusto
-7. Genera script di rollback
+6. Ti guida per installare **VGA Intel** manualmente (bug Parade MUX)
+7. Ti guida per installare **NVIDIA** manualmente
+8. Genera script di rollback
 
 ### 4. Riavvia e verifica
 
@@ -97,8 +98,8 @@ Lo script:
 1. Chipset Intel    (base per touchpad, I2C)
 2. ME               (Management Engine)
 3. DPTF             (Thermal - versione 11401!)
-4. VGA Intel UMA    (grafica integrata)
-5. >>> NVIDIA <<<   (manuale - lo script si ferma qui)
+4. >>> VGA Intel <<< (MANUALE - lo script ti guida via Device Manager)
+5. >>> NVIDIA <<<   (MANUALE - lo script ti guida)
 6. Audio Realtek
 7. LAN Ethernet
 8. WiFi
