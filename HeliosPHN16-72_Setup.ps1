@@ -1,6 +1,6 @@
 #Requires -RunAsAdministrator
 # ============================================================================
-# PHN16-72 Setup v7.1
+# PHN16-72 Setup v7.3
 # ============================================================================
 # BASATO SU SOLUZIONI DOCUMENTATE DALLA COMMUNITY ACER:
 # - https://community.acer.com/en/discussion/723737 (artkirius - SOLVED)
@@ -37,6 +37,36 @@ param(
     [switch]$DryRun,
     [switch]$SkipIntelppmFix  # Se vuoi saltare il fix intelppm
 )
+
+# Auto-rilancio come Amministratore se necessario
+if (-not ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {
+    Write-Host ""
+    Write-Host "  Rilancio come Amministratore..." -ForegroundColor Yellow
+    
+    # Ricostruisce gli argomenti
+    $argList = @("-NoProfile", "-ExecutionPolicy", "Bypass", "-File", "`"$PSCommandPath`"")
+    if ($SkipDownload)    { $argList += "-SkipDownload" }
+    if ($SkipInstall)     { $argList += "-SkipInstall" }
+    if ($DryRun)          { $argList += "-DryRun" }
+    if ($SkipIntelppmFix) { $argList += "-SkipIntelppmFix" }
+    
+    try {
+        Start-Process powershell.exe -ArgumentList $argList -Verb RunAs -Wait
+        exit 0
+    } catch {
+        Write-Host ""
+        Write-Host "  ============================================================" -ForegroundColor Red
+        Write-Host "  ERRORE: Impossibile ottenere privilegi Amministratore!" -ForegroundColor Red
+        Write-Host "  ============================================================" -ForegroundColor Red
+        Write-Host ""
+        Write-Host "  Come fare manualmente:" -ForegroundColor Yellow
+        Write-Host "  1. Cerca 'PowerShell' nel menu Start" -ForegroundColor White
+        Write-Host "  2. Click destro -> 'Esegui come amministratore'" -ForegroundColor White
+        Write-Host "  3. Naviga alla cartella dello script e riesegui" -ForegroundColor White
+        Write-Host ""
+        exit 1
+    }
+}
 
 $ErrorActionPreference = "SilentlyContinue"
 
@@ -192,7 +222,7 @@ if (!(Test-Path $TempPath)) { New-Item -ItemType Directory -Path $TempPath -Forc
 # Header
 Write-Host ""
 Write-Host "==================================================================" -ForegroundColor Cyan
-Write-Host "           PHN16-72 BSOD FIX SCRIPT v7.1" -ForegroundColor Cyan
+Write-Host "           PHN16-72 BSOD FIX SCRIPT v7.3" -ForegroundColor Cyan
 Write-Host "==================================================================" -ForegroundColor Cyan
 Write-Host "  Basato su soluzioni Community Acer (artkirius, jihakkim)" -ForegroundColor Gray
 Write-Host "------------------------------------------------------------------" -ForegroundColor Cyan
@@ -645,7 +675,7 @@ if ($SkipDownload) {
     # Genera guida HTML
     $html = @"
 <!DOCTYPE html>
-<html><head><meta charset="UTF-8"><title>PHN16-72 Driver Guide v7.1</title>
+<html><head><meta charset="UTF-8"><title>PHN16-72 Driver Guide v7.3</title>
 <style>
 body{font-family:Segoe UI,sans-serif;max-width:900px;margin:40px auto;padding:20px;background:#1a1a2e;color:#eee}
 h1{color:#00d4ff;border-bottom:2px solid #00d4ff;padding-bottom:10px}
@@ -664,7 +694,7 @@ th{background:#333}
 .bad{color:#ff4444}
 .good{color:#00ff88}
 </style></head><body>
-<h1>PHN16-72 Driver Guide v7.1</h1>
+<h1>PHN16-72 Driver Guide v7.3</h1>
 
 <div class="critical">
 <h2>DRIVER CHE CAUSANO BSOD</h2>
@@ -755,7 +785,7 @@ Il bloatware da evitare e' il SOFTWARE Killer Control Center, non il driver.</p>
 </div>
 
 <p style="margin-top:40px;color:#888;text-align:center">
-Generato: $(Get-Date -Format "dd/MM/yyyy HH:mm") | PHN16-72 Setup v7.1
+Generato: $(Get-Date -Format "dd/MM/yyyy HH:mm") | PHN16-72 Setup v7.3
 </p>
 </body></html>
 "@
@@ -1162,7 +1192,7 @@ Write-Host "==================================================================" 
 # Genera script rollback
 $rollbackScript = @'
 #Requires -RunAsAdministrator
-# PHN16-72 Rollback v7.1
+# PHN16-72 Rollback v7.3
 # Ripristina le impostazioni originali
 
 Write-Host "PHN16-72 Rollback" -ForegroundColor Yellow
