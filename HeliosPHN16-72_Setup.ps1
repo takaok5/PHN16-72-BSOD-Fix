@@ -1233,7 +1233,7 @@ if ($intelppmStatus -ne "DISABLED" -and !$SkipIntelppmFix -and !$DryRun) {
 if ($Issues -contains "GNA") {
     Write-Host "  [OK] GNA rimosso/bloccato" -ForegroundColor Green
 }
-if ($Issues -contains "KILLER_SW") {
+if ($Issues -contains "KILLER_SW") 
     Write-Host "  [OK] Killer SOFTWARE rimosso (driver WiFi mantenuto)" -ForegroundColor Green
 }
 Write-Host "  [OK] Windows Update bloccato per driver problematici" -ForegroundColor Green
