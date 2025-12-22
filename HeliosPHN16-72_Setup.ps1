@@ -1,6 +1,6 @@
 #Requires -RunAsAdministrator
 # ============================================================================
-# PHN16-72 Setup v7.3
+# PHN16-72 Setup v7.5
 # ============================================================================
 # BASATO SU SOLUZIONI DOCUMENTATE DALLA COMMUNITY ACER:
 # - https://community.acer.com/en/discussion/723737 (artkirius - SOLVED)
@@ -222,7 +222,7 @@ if (!(Test-Path $TempPath)) { New-Item -ItemType Directory -Path $TempPath -Forc
 # Header
 Write-Host ""
 Write-Host "==================================================================" -ForegroundColor Cyan
-Write-Host "           PHN16-72 BSOD FIX SCRIPT v7.3" -ForegroundColor Cyan
+Write-Host "           PHN16-72 BSOD FIX SCRIPT v7.5" -ForegroundColor Cyan
 Write-Host "==================================================================" -ForegroundColor Cyan
 Write-Host "  Basato su soluzioni Community Acer (artkirius, jihakkim)" -ForegroundColor Gray
 Write-Host "------------------------------------------------------------------" -ForegroundColor Cyan
@@ -675,7 +675,7 @@ if ($SkipDownload) {
     # Genera guida HTML
     $html = @"
 <!DOCTYPE html>
-<html><head><meta charset="UTF-8"><title>PHN16-72 Driver Guide v7.3</title>
+<html><head><meta charset="UTF-8"><title>PHN16-72 Driver Guide v7.5</title>
 <style>
 body{font-family:Segoe UI,sans-serif;max-width:900px;margin:40px auto;padding:20px;background:#1a1a2e;color:#eee}
 h1{color:#00d4ff;border-bottom:2px solid #00d4ff;padding-bottom:10px}
@@ -694,7 +694,7 @@ th{background:#333}
 .bad{color:#ff4444}
 .good{color:#00ff88}
 </style></head><body>
-<h1>PHN16-72 Driver Guide v7.3</h1>
+<h1>PHN16-72 Driver Guide v7.5</h1>
 
 <div class="critical">
 <h2>DRIVER CHE CAUSANO BSOD</h2>
@@ -747,13 +747,13 @@ Il bloatware da evitare e' il SOFTWARE Killer Control Center, non il driver.</p>
 
 <div class="box">
 <h2><span class="step">2</span> Ordine di Installazione (IMPORTANTE!)</h2>
-<p>Lo script installa automaticamente nell'ordine corretto e ti chiedera' di installare NVIDIA al momento giusto:</p>
+<p>Lo script installa automaticamente nell'ordine corretto e ti guida per VGA Intel e NVIDIA:</p>
 <ol>
 <li><b>Chipset Intel</b> - PRIMO! Base per tutti gli altri driver</li>
 <li><b>ME</b> - Intel Management Engine</li>
 <li><b>DPTF</b> - Thermal Framework (versione SENZA APO!)</li>
-<li><b>VGA Intel UMA</b> - Grafica integrata</li>
-<li><b style="color:#76b900">NVIDIA</b> - Lo script si fermera' qui per farti installare manualmente</li>
+<li><b style="color:#00d4ff">VGA Intel UMA</b> - Lo script ti guidera' per installazione manuale via Device Manager</li>
+<li><b style="color:#76b900">NVIDIA</b> - Installare manualmente (GeForce Experience o nvidia.com)</li>
 <li><b>Audio Realtek</b></li>
 <li><b>LAN</b> - Ethernet</li>
 <li><b>Wireless LAN</b> - WiFi</li>
@@ -761,6 +761,21 @@ Il bloatware da evitare e' il SOFTWARE Killer Control Center, non il driver.</p>
 </ol>
 <p style="color:#ff8800"><b>RIAVVIA dopo ogni driver critico (Chipset, ME, DPTF, GPU)</b></p>
 <p style="color:#00ff88"><b>Windows Update e' bloccato per tutti questi driver!</b></p>
+</div>
+
+<div class="warning">
+<h3>VGA INTEL - INSTALLAZIONE MANUALE</h3>
+<p>L'installer automatico Intel VGA ha un bug (Parade MUX) su questi laptop.</p>
+<p>Lo script ti guidera' per installare manualmente via Device Manager:</p>
+<ol>
+<li>Estrai il file ZIP del driver VGA Intel</li>
+<li>Apri Device Manager (Win+X -> Device Manager)</li>
+<li>Espandi "Display adapters"</li>
+<li>Click destro su "Intel UHD Graphics" -> "Update driver"</li>
+<li>"Browse my computer for drivers"</li>
+<li>Seleziona la cartella estratta -> Next</li>
+</ol>
+<p style="color:#ff4444"><b>Se lo schermo diventa nero:</b> Riavvia in Safe Mode e ripeti</p>
 </div>
 
 <div class="box">
@@ -785,7 +800,7 @@ Il bloatware da evitare e' il SOFTWARE Killer Control Center, non il driver.</p>
 </div>
 
 <p style="margin-top:40px;color:#888;text-align:center">
-Generato: $(Get-Date -Format "dd/MM/yyyy HH:mm") | PHN16-72 Setup v7.3
+Generato: $(Get-Date -Format "dd/MM/yyyy HH:mm") | PHN16-72 Setup v7.5
 </p>
 </body></html>
 "@
@@ -803,7 +818,7 @@ Generato: $(Get-Date -Format "dd/MM/yyyy HH:mm") | PHN16-72 Setup v7.3
     Write-Host "  1. [OK] Chipset Intel (Serial IO, I2C)" -ForegroundColor Green
     Write-Host "  2. [OK] ME - Intel Management Engine" -ForegroundColor Green
     Write-Host "  3. [OK] DPTF (SENZA APO!) - versione 11401" -ForegroundColor Green
-    Write-Host "  4. [OK] VGA Intel UMA (grafica integrata)" -ForegroundColor Green
+    Write-Host "  4. [>>] VGA Intel UMA - LO SCRIPT TI GUIDERA'" -ForegroundColor Cyan
     Write-Host "  5. [>>] NVIDIA - LO SCRIPT TI CHIEDERA' DI INSTALLARLO" -ForegroundColor Cyan
     Write-Host "  6. [OK] Audio Realtek" -ForegroundColor Green
     Write-Host "  7. [OK] LAN E3100G (SENZA Killer Control Centre!)" -ForegroundColor Green
@@ -843,31 +858,34 @@ Write-Host "  Ordine installazione: Chipset > ME > DPTF > GPU > Audio > WiFi > B
 Write-Host ""
 
 # Mappa priorità installazione (numero più basso = prima)
+# NOTA: VGA Intel e NVIDIA sono MANUALI, non in questa lista
 $InstallOrder = @{
     "chipset"   = 1
     "chip"      = 1
     "serialio"  = 1
     "serial"    = 1
+    "io.driver" = 1      # Nome file Acer: "IO Drivers_Intel" (. = qualsiasi char)
     "me"        = 2
     "management"= 2
+    "mgmtengine"= 2      # Nome file Acer: "MgmtEngine_Intel"
+    "mgmt.*engine" = 2
     "dptf"      = 3
     "dtt"       = 3
     "thermal"   = 3
-    "vga"       = 4
-    "graphics"  = 4
-    "intel_uhd" = 4
-    # NVIDIA = 5 (MANUALE - pausa dopo VGA Intel)
-    "audio"     = 6
-    "realtek"   = 6
-    "sound"     = 6
-    "lan"       = 7
-    "ethernet"  = 7
-    "wlan"      = 8
-    "wifi"      = 8
-    "wireless"  = 8
-    "killer"    = 8
-    "bluetooth" = 9
-    "bt"        = 9
+    # VGA Intel = MANUALE (Parade MUX bug)
+    # NVIDIA = MANUALE
+    "audio"     = 4
+    "realtek"   = 4
+    "sound"     = 4
+    "lan"       = 5
+    "ethernet"  = 5
+    "e3100"     = 5      # Killer E3100 LAN
+    "wlan"      = 6
+    "wifi"      = 6
+    "wireless"  = 6
+    "killer"    = 6
+    "bluetooth" = 7
+    "bt_"       = 7      # bt_ per evitare match accidentali
 }
 
 # Driver da rimuovere prima dell'installazione (pulizia)
@@ -888,16 +906,29 @@ if ($SkipInstall) {
     } else {
         Write-Log "  Trovati $($zips.Count) pacchetti" "Cyan"
         
-        # Filtra e blocca driver che non devono essere installati
+        # Filtra e blocca driver che non devono essere installati automaticamente
         $validZips = @()
+        $vgaIntelZip = $null
+        
         foreach ($z in $zips) {
             $name = $z.Name.ToLower()
             if ($name -match "gna|gaussian") {
                 Write-Log "  [X] BLOCCATO: $($z.Name) [GNA - causa BSOD]" "Red"
                 continue
             }
+            if ($name -match "hid.*event|hid.*filter|intc1070") {
+                Write-Log "  [X] BLOCCATO: $($z.Name) [HID Event Filter - causa freeze]" "Red"
+                continue
+            }
             if ($name -match "nvidia|geforce|rtx|gtx") {
                 Write-Log "  [i] SKIP: $($z.Name) [NVIDIA - installare manualmente]" "Cyan"
+                continue
+            }
+            # VGA Intel ha problemi con installer silenzioso (Parade MUX bug)
+            # Acer consiglia installazione manuale via Device Manager
+            if ($name -match "vga.*intel|intel.*vga") {
+                Write-Log "  [i] SKIP: $($z.Name) [VGA Intel - installare manualmente]" "Cyan"
+                $vgaIntelZip = $z
                 continue
             }
             $validZips += $z
@@ -936,10 +967,10 @@ if ($SkipInstall) {
                 $name = $z.Name.ToLower()
                 
                 # Aggiungi pattern di pulizia in base al tipo di pacchetto
-                if ($name -match "chipset|serial") {
+                if ($name -match "chipset|serial|io.driver") {
                     $cleanPatterns += "ialpss|serialio|i2c|gpio|spi|uart"
                 }
-                if ($name -match "me|management") {
+                if ($name -match "me|management|mgmtengine|mgmt") {
                     $cleanPatterns += "heci|mei_"
                 }
                 if ($name -match "dptf|dtt|thermal") {
@@ -951,13 +982,13 @@ if ($SkipInstall) {
                 if ($name -match "audio|realtek|sound") {
                     $cleanPatterns += "realtek|hdaudio|IntcAudioBus"
                 }
-                if ($name -match "lan|ethernet") {
+                if ($name -match "ethernet|e3100") {
                     $cleanPatterns += "e1d|e1r|e1c|igc|killer.*eth"
                 }
-                if ($name -match "wlan|wifi|wireless|killer.*wi") {
+                if ($name -match "wlan|wifi|wireless") {
                     $cleanPatterns += "netwtw|killer.*wi|iwl"
                 }
-                if ($name -match "bluetooth|bt") {
+                if ($name -match "bluetooth") {
                     $cleanPatterns += "ibtusb|IntelBluetooth"
                 }
             }
@@ -1031,27 +1062,58 @@ if ($SkipInstall) {
         Write-Host ""
         Write-Log "  --- Installazione nuovi driver ---" "Yellow"
         
-        # Flag per sapere quando mostrare prompt NVIDIA
-        $vgaInstalled = $false
-        $nvidiaPromptShown = $false
+        # Flag per prompt GPU
+        $gpuPromptShown = $false
+        $dptfInstalled = $false
         
         # FASE 6b: INSTALLAZIONE ORDINATA
         foreach ($z in $sortedZips) {
             $name = $z.Name.ToLower()
             
-            # Dopo VGA Intel, chiedi di installare NVIDIA
-            if ($vgaInstalled -and !$nvidiaPromptShown) {
-                # Verifica se il prossimo driver NON è VGA (quindi abbiamo finito con Intel GPU)
-                $isVga = $name -match "vga|graphics|intel.*uhd|intel.*graph"
-                if (!$isVga) {
-                    $nvidiaPromptShown = $true
+            # Dopo DPTF, chiedi di installare VGA Intel + NVIDIA manualmente
+            if ($dptfInstalled -and !$gpuPromptShown) {
+                $isDptf = $name -match "dptf|dtt|thermal"
+                if (!$isDptf) {
+                    $gpuPromptShown = $true
+                    
+                    # === PROMPT VGA INTEL ===
+                    if ($vgaIntelZip) {
+                        Write-Host ""
+                        Write-Host "  ============================================================" -ForegroundColor Cyan
+                        Write-Host "  >>> INSTALLA ORA IL DRIVER VGA INTEL <<<" -ForegroundColor Cyan
+                        Write-Host "  ============================================================" -ForegroundColor Cyan
+                        Write-Host ""
+                        Write-Host "  Il driver VGA Intel richiede installazione manuale" -ForegroundColor White
+                        Write-Host "  (l'installer automatico ha un bug con Parade MUX)" -ForegroundColor Gray
+                        Write-Host ""
+                        Write-Host "  PROCEDURA:" -ForegroundColor Yellow
+                        Write-Host "  1. Apri: $($vgaIntelZip.FullName)" -ForegroundColor White
+                        Write-Host "  2. Estrai il contenuto in una cartella" -ForegroundColor White
+                        Write-Host "  3. Apri Device Manager (Win+X -> Device Manager)" -ForegroundColor White
+                        Write-Host "  4. Espandi 'Display adapters'" -ForegroundColor White
+                        Write-Host "  5. Click destro su 'Intel UHD Graphics' -> 'Update driver'" -ForegroundColor White
+                        Write-Host "  6. 'Browse my computer for drivers'" -ForegroundColor White
+                        Write-Host "  7. Seleziona la cartella estratta -> Next" -ForegroundColor White
+                        Write-Host ""
+                        Write-Host "  NOTA: Se lo schermo diventa nero, riavvia in Safe Mode" -ForegroundColor Red
+                        Write-Host "  ============================================================" -ForegroundColor Cyan
+                        Write-Host ""
+                        
+                        if (!$DryRun) {
+                            $response = Read-Host "  Premi INVIO dopo aver installato VGA Intel (o 'S' per saltare)"
+                            if ($response -ne 'S' -and $response -ne 's') {
+                                Write-Log "  VGA Intel installato dall'utente" "Green"
+                            } else {
+                                Write-Log "  VGA Intel saltato - installare dopo il riavvio" "Yellow"
+                            }
+                        }
+                    }
+                    
+                    # === PROMPT NVIDIA ===
                     Write-Host ""
                     Write-Host "  ============================================================" -ForegroundColor Green
                     Write-Host "  >>> INSTALLA ORA I DRIVER NVIDIA <<<" -ForegroundColor Green
                     Write-Host "  ============================================================" -ForegroundColor Green
-                    Write-Host ""
-                    Write-Host "  I driver Intel GPU sono stati installati." -ForegroundColor White
-                    Write-Host "  Ora installa i driver NVIDIA:" -ForegroundColor White
                     Write-Host ""
                     Write-Host "  OPZIONE 1: GeForce Experience (consigliato)" -ForegroundColor Cyan
                     Write-Host "    - Scarica da: https://www.nvidia.com/geforce-experience/" -ForegroundColor Gray
@@ -1120,13 +1182,41 @@ if ($SkipInstall) {
                     }
                 }
                 
-                # Metodo 2: setup.exe
+                # Metodo 2: setup.exe con parametri corretti per tipo
                 if ($setup -and !$installed) {
                     Write-Log "    Eseguo: $($setup.Name)" "Cyan"
-                    $proc = Start-Process $setup.FullName -ArgumentList "/quiet","/norestart" -Wait -PassThru 2>$null
+                    
+                    # Intel Graphics Installer usa --silent
+                    if ($setup.Name -match "Installer\.exe" -and ($name -match "vga|graphics|intel.*graph")) {
+                        $proc = Start-Process $setup.FullName -ArgumentList "--silent" -Wait -PassThru 2>$null
+                    }
+                    # Intel SerialIO usa -s -overwrite
+                    elseif ($setup.Name -match "SetupSerialIO") {
+                        $proc = Start-Process $setup.FullName -ArgumentList "-s","-overwrite" -Wait -PassThru 2>$null
+                    }
+                    # Intel ME usa -s -overwrite  
+                    elseif ($setup.Name -match "SetupME") {
+                        $proc = Start-Process $setup.FullName -ArgumentList "-s","-overwrite" -Wait -PassThru 2>$null
+                    }
+                    # Intel Chipset usa -s -overwrite
+                    elseif ($setup.Name -match "SetupChipset") {
+                        $proc = Start-Process $setup.FullName -ArgumentList "-s","-overwrite" -Wait -PassThru 2>$null
+                    }
+                    # Realtek Audio usa -s
+                    elseif ($setup.Name -match "setup\.exe" -and ($name -match "audio|realtek|sound")) {
+                        $proc = Start-Process $setup.FullName -ArgumentList "-s" -Wait -PassThru 2>$null
+                    }
+                    # Default: /quiet /norestart
+                    else {
+                        $proc = Start-Process $setup.FullName -ArgumentList "/quiet","/norestart" -Wait -PassThru 2>$null
+                    }
+                    
                     if ($proc.ExitCode -eq 0 -or $proc.ExitCode -eq 3010) {
                         Write-Log "    [OK] Installato" "Green"
                         $installed = $true
+                    } elseif ($proc.ExitCode -eq 1603) {
+                        Write-Log "    [!] Exit code: 1603 (driver in uso) - installo INF forzato" "Yellow"
+                        # Non marcare come installato, passerà al metodo 3
                     } else {
                         Write-Log "    [!] Exit code: $($proc.ExitCode)" "Yellow"
                     }
@@ -1156,9 +1246,64 @@ if ($SkipInstall) {
                     Write-Log "    [!] Nessun installer trovato - installa manualmente" "Yellow"
                 }
                 
-                # Segna se abbiamo installato driver VGA Intel
-                if ($installed -and ($name -match "vga|graphics|intel.*uhd|intel.*graph")) {
-                    $vgaInstalled = $true
+                # Segna se abbiamo installato driver DPTF (per mostrare prompt GPU dopo)
+                if ($installed -and ($name -match "dptf|dtt|thermal")) {
+                    $dptfInstalled = $true
+                }
+            }
+        }
+        
+        # Se non c'era DPTF ma c'è VGA Intel da installare, mostra comunque il prompt GPU
+        if (!$gpuPromptShown -and $vgaIntelZip) {
+            Write-Host ""
+            Write-Host "  ============================================================" -ForegroundColor Cyan
+            Write-Host "  >>> INSTALLA ORA IL DRIVER VGA INTEL <<<" -ForegroundColor Cyan
+            Write-Host "  ============================================================" -ForegroundColor Cyan
+            Write-Host ""
+            Write-Host "  Il driver VGA Intel richiede installazione manuale" -ForegroundColor White
+            Write-Host "  (l'installer automatico ha un bug con Parade MUX)" -ForegroundColor Gray
+            Write-Host ""
+            Write-Host "  PROCEDURA:" -ForegroundColor Yellow
+            Write-Host "  1. Apri: $($vgaIntelZip.FullName)" -ForegroundColor White
+            Write-Host "  2. Estrai il contenuto in una cartella" -ForegroundColor White
+            Write-Host "  3. Apri Device Manager (Win+X -> Device Manager)" -ForegroundColor White
+            Write-Host "  4. Espandi 'Display adapters'" -ForegroundColor White
+            Write-Host "  5. Click destro su 'Intel UHD Graphics' -> 'Update driver'" -ForegroundColor White
+            Write-Host "  6. 'Browse my computer for drivers'" -ForegroundColor White
+            Write-Host "  7. Seleziona la cartella estratta -> Next" -ForegroundColor White
+            Write-Host ""
+            Write-Host "  ============================================================" -ForegroundColor Cyan
+            Write-Host ""
+            
+            if (!$DryRun) {
+                $response = Read-Host "  Premi INVIO dopo aver installato VGA Intel (o 'S' per saltare)"
+                if ($response -ne 'S' -and $response -ne 's') {
+                    Write-Log "  VGA Intel installato dall'utente" "Green"
+                } else {
+                    Write-Log "  VGA Intel saltato" "Yellow"
+                }
+            }
+            
+            Write-Host ""
+            Write-Host "  ============================================================" -ForegroundColor Green
+            Write-Host "  >>> INSTALLA ORA I DRIVER NVIDIA <<<" -ForegroundColor Green
+            Write-Host "  ============================================================" -ForegroundColor Green
+            Write-Host ""
+            Write-Host "  OPZIONE 1: GeForce Experience (consigliato)" -ForegroundColor Cyan
+            Write-Host "    - Scarica da: https://www.nvidia.com/geforce-experience/" -ForegroundColor Gray
+            Write-Host ""
+            Write-Host "  OPZIONE 2: Driver manuali" -ForegroundColor Cyan
+            Write-Host "    - Scarica da: https://www.nvidia.com/drivers/" -ForegroundColor Gray
+            Write-Host ""
+            Write-Host "  ============================================================" -ForegroundColor Green
+            Write-Host ""
+            
+            if (!$DryRun) {
+                $response = Read-Host "  Premi INVIO dopo aver installato NVIDIA (o 'S' per saltare)"
+                if ($response -ne 'S' -and $response -ne 's') {
+                    Write-Log "  NVIDIA installato dall'utente" "Green"
+                } else {
+                    Write-Log "  NVIDIA saltato" "Yellow"
                 }
             }
         }
@@ -1192,7 +1337,7 @@ Write-Host "==================================================================" 
 # Genera script rollback
 $rollbackScript = @'
 #Requires -RunAsAdministrator
-# PHN16-72 Rollback v7.3
+# PHN16-72 Rollback v7.5
 # Ripristina le impostazioni originali
 
 Write-Host "PHN16-72 Rollback" -ForegroundColor Yellow
@@ -1233,7 +1378,7 @@ if ($intelppmStatus -ne "DISABLED" -and !$SkipIntelppmFix -and !$DryRun) {
 if ($Issues -contains "GNA") {
     Write-Host "  [OK] GNA rimosso/bloccato" -ForegroundColor Green
 }
-if ($Issues -contains "KILLER_SW") 
+if ($Issues -contains "KILLER_SW") {
     Write-Host "  [OK] Killer SOFTWARE rimosso (driver WiFi mantenuto)" -ForegroundColor Green
 }
 Write-Host "  [OK] Windows Update bloccato per driver problematici" -ForegroundColor Green
