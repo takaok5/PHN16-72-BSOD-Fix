@@ -1,6 +1,6 @@
 #Requires -RunAsAdministrator
 # ============================================================================
-# PHN16-72 Check v7.1
+# PHN16-72 Check v7.3
 # ============================================================================
 # Verifica tutti i fix BSOD dalla Community Acer
 # ============================================================================
@@ -8,6 +8,22 @@
 param(
     [switch]$Debug  # Mostra info dettagliate su cosa viene rilevato
 )
+
+# Auto-rilancio come Amministratore se necessario
+if (-not ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {
+    Write-Host "  Rilancio come Amministratore..." -ForegroundColor Yellow
+    
+    $argList = @("-NoProfile", "-ExecutionPolicy", "Bypass", "-File", "`"$PSCommandPath`"")
+    if ($Debug) { $argList += "-Debug" }
+    
+    try {
+        Start-Process powershell.exe -ArgumentList $argList -Verb RunAs -Wait
+        exit 0
+    } catch {
+        Write-Host "  ERRORE: Esegui questo script come Amministratore!" -ForegroundColor Red
+        exit 1
+    }
+}
 
 $ErrorActionPreference = "SilentlyContinue"
 
@@ -46,7 +62,7 @@ function Write-Check {
 # Header
 Write-Host ""
 Write-Host "==================================================================" -ForegroundColor Cyan
-Write-Host "           PHN16-72 BSOD FIX CHECK v7.1" -ForegroundColor Cyan
+Write-Host "           PHN16-72 BSOD FIX CHECK v7.3" -ForegroundColor Cyan
 Write-Host "==================================================================" -ForegroundColor Cyan
 Write-Host "  Verifica fix da Community Acer (artkirius, jihakkim, Puraw)" -ForegroundColor Gray
 Write-Host "==================================================================" -ForegroundColor Cyan
