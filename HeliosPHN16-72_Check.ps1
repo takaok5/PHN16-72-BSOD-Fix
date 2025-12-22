@@ -1,6 +1,6 @@
 #Requires -RunAsAdministrator
 # ============================================================================
-# PHN16-72 Check v7.3
+# PHN16-72 Check v7.5
 # ============================================================================
 # Verifica tutti i fix BSOD dalla Community Acer
 # ============================================================================
@@ -62,7 +62,7 @@ function Write-Check {
 # Header
 Write-Host ""
 Write-Host "==================================================================" -ForegroundColor Cyan
-Write-Host "           PHN16-72 BSOD FIX CHECK v7.3" -ForegroundColor Cyan
+Write-Host "           PHN16-72 BSOD FIX CHECK v7.5" -ForegroundColor Cyan
 Write-Host "==================================================================" -ForegroundColor Cyan
 Write-Host "  Verifica fix da Community Acer (artkirius, jihakkim, Puraw)" -ForegroundColor Gray
 Write-Host "==================================================================" -ForegroundColor Cyan
