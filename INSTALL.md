@@ -14,7 +14,7 @@ C:\Users\TUONOME\Downloads\AcerDrivers_PHN16-72\
 - [ ] Chipset Intel
 - [ ] ME (Management Engine)
 - [ ] DPTF (**NON APO!** versione 11401)
-- [ ] VGA Intel UMA
+- [ ] VGA Intel UMA (**installazione manuale** - lo script ti guida)
 - [ ] Audio Realtek
 - [ ] LAN E3100G (**SENZA Killer Control Centre!**)
 - [ ] Wireless LAN (**SENZA 1675i!**)
@@ -48,9 +48,10 @@ Set-ExecutionPolicy -ExecutionPolicy Bypass -Scope Process
 ```
 
 3. Segui le istruzioni a schermo
-4. Quando richiesto, installa i driver NVIDIA manualmente
-5. **RIAVVIA** il PC
-6. Verifica con `.\HeliosPHN16-72_Check.ps1`
+4. Quando richiesto, installa **VGA Intel** manualmente (via Device Manager)
+5. Quando richiesto, installa **NVIDIA** manualmente
+6. **RIAVVIA** il PC
+7. Verifica con `.\HeliosPHN16-72_Check.ps1`
 
 ---
 
@@ -70,7 +71,7 @@ C:\Users\TUONOME\
         ├── Chipset_Intel_xxx.zip   ← Driver ZIP (non estratti)
         ├── ME_Intel_xxx.zip
         ├── DPTF_xxx.zip            ← Versione SENZA APO!
-        ├── VGA_Intel_UMA_xxx.zip
+        ├── VGA_Intel_UMA_xxx.zip   ← Installazione MANUALE (lo script ti guida)
         ├── Audio_Realtek_xxx.zip
         ├── LAN_xxx.zip
         ├── WLAN_xxx.zip
