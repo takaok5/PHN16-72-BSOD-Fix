@@ -43,14 +43,14 @@ C:\Users\TUONOME\Downloads\AcerDrivers_PHN16-72\
 |--------|------|
 | ✅ Chipset Intel | Serial IO, I2C |
 | ✅ ME | Intel Management Engine |
-| ✅ DPTF | ⚠️ **SENZA APO!** Versione 11401 |
+| ✅ DPTF | ⚠️ **NO APO!** Versione 11401 |
 | ✅ VGA Intel UMA | Grafica integrata |
 | ✅ Audio Realtek | |
-| ✅ LAN | **SENZA Killer Control Centre!** E3100G |
-| ✅ Wireless LAN | **SENZA 1675i!** |
+| ✅ LAN | ⚠️ **NO Killer Control Centre!** E3100G |
+| ✅ Wireless LAN | ⚠️ **NO 1675i!** |
 | ✅ Bluetooth | Se necessario |
-| ❌ GNA | **NON scaricare!** |
-| ❌ HID Event Filter | **NON scaricare!** |
+| ❌ GNA | ⚠️ **NON scaricare!** |
+| ❌ HID Event Filter | ⚠️ **NON scaricare!** |
 
 > ⚠️ **IMPORTANTE:** Non scaricare DPTF (APO)! La versione APO richiede DTT 11405+ che causa BSOD.
 
