@@ -33,6 +33,23 @@ This removes known-bad drivers (GNA, DPTF APO, Killer bloatware), blocks Windows
 
 **Option A: PredatorGuard** (simple, automated, open source)
 
+Before using it, you need the WinRing0 driver files:
+
+- `WinRing0x64.dll`
+- `WinRing0x64.sys`
+
+Where to get them:
+
+1. Easiest path: install or extract [ThrottleStop](https://www.techpowerup.com/download/techpowerup-throttlestop/) and copy `WinRing0x64.dll` and `WinRing0x64.sys` from the ThrottleStop folder.
+2. Alternative: build or download them from the [WinRing0 source project](https://github.com/GermanAizek/WinRing0).
+
+How to install/use them with PredatorGuard:
+
+1. Build or place `PredatorGuard.exe` in its own folder.
+2. Copy `WinRing0x64.dll` and `WinRing0x64.sys` into the **same folder** as `PredatorGuard.exe`.
+3. Run `PredatorGuard.exe` as Administrator.
+4. The tool loads the driver automatically when it starts. There is no separate installer for the driver in this workflow.
+
 ```bash
 PredatorGuard.exe --lock-only    # Lock current power limits
 PredatorGuard.exe                # Apply Performance profile + lock
