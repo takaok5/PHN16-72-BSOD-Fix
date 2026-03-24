@@ -40,6 +40,18 @@ PredatorGuard.exe --profile game # Apply Game profile + lock
 PredatorGuard.exe --status       # Show current MSR values
 ```
 
+Use it with this repo's settings like this:
+
+1. `PredatorGuard.exe`
+   Applies the default **Performance** preset from this repo:
+   `PL1=115W`, `PL2=157W`, `Speed Shift Min=4`, `Max=54`, `EPP=0`, turbo capped at `5.4 GHz`, then locks the power limits.
+2. `PredatorGuard.exe --profile game`
+   Uses the repo's **Game** preset if you want a lower sustained power limit (`PL1=55W`) while keeping the same 5.4 GHz cap.
+3. `PredatorGuard.exe --lock-only`
+   Use this only if your power limits are already set the way you want and you only need the lock.
+4. `PredatorGuard.exe --status`
+   Check the current MSR values after applying the preset.
+
 Set up Task Scheduler to run at boot:
 ```powershell
 schtasks /create /tn "PredatorGuard" /tr "`"C:\path\to\PredatorGuard.exe`" --lock-only" /sc onstart /rl highest /ru SYSTEM /f
