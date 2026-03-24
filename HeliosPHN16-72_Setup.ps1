@@ -1,6 +1,10 @@
 #Requires -RunAsAdministrator
 # ============================================================================
+<<<<<<< HEAD
 # PHN16-72 Setup v7.6
+=======
+# PHN16-72 Setup v7.5
+>>>>>>> dabfaea (Initial release: BSOD fix toolkit for Acer Predator PHN16-72)
 # ============================================================================
 # BASATO SU SOLUZIONI DOCUMENTATE DALLA COMMUNITY ACER:
 # - https://community.acer.com/en/discussion/723737 (artkirius - SOLVED)
@@ -184,6 +188,7 @@ $BLOCKED_HWIDS = @(
     "PCI\VEN_8086&DEV_A0F0",
     "PCI\VEN_8086&DEV_51F0",
     "PCI\VEN_8086&DEV_51F1",
+<<<<<<< HEAD
     "PCI\VEN_8086&DEV_54F0",
     
     # === BLUETOOTH ===
@@ -192,6 +197,16 @@ $BLOCKED_HWIDS = @(
     "USB\VID_8087&PID_0029",
     "USB\VID_8087&PID_0026",
     "USB\VID_8087&PID_0025"
+=======
+    "PCI\VEN_8086&DEV_54F0"
+
+    # === BLUETOOTH === (NON bloccato - serve per funzionamento BT)
+    # "USB\VID_8087&PID_0033",  # Intel Bluetooth AX211/AX1675
+    # "USB\VID_8087&PID_0032",
+    # "USB\VID_8087&PID_0029",
+    # "USB\VID_8087&PID_0026",
+    # "USB\VID_8087&PID_0025"
+>>>>>>> dabfaea (Initial release: BSOD fix toolkit for Acer Predator PHN16-72)
 )
 
 # Driver INF da bloccare/rimuovere
@@ -222,7 +237,11 @@ if (!(Test-Path $TempPath)) { New-Item -ItemType Directory -Path $TempPath -Forc
 # Header
 Write-Host ""
 Write-Host "==================================================================" -ForegroundColor Cyan
+<<<<<<< HEAD
 Write-Host "           PHN16-72 BSOD FIX SCRIPT v7.6" -ForegroundColor Cyan
+=======
+Write-Host "           PHN16-72 BSOD FIX SCRIPT v7.5" -ForegroundColor Cyan
+>>>>>>> dabfaea (Initial release: BSOD fix toolkit for Acer Predator PHN16-72)
 Write-Host "==================================================================" -ForegroundColor Cyan
 Write-Host "  Basato su soluzioni Community Acer (artkirius, jihakkim)" -ForegroundColor Gray
 Write-Host "------------------------------------------------------------------" -ForegroundColor Cyan
@@ -237,6 +256,10 @@ Write-Host "------------------------------------------------------------------" 
 Write-Host "  Driver problematici da gestire:" -ForegroundColor White
 Write-Host "  - Intel DPTF/DTT    : versioni 11405+ causano crash" -ForegroundColor White
 Write-Host "  - Intel GNA         : BSOD vari" -ForegroundColor White
+<<<<<<< HEAD
+=======
+Write-Host "  - Intel HID Filter  : freeze sistema" -ForegroundColor White
+>>>>>>> dabfaea (Initial release: BSOD fix toolkit for Acer Predator PHN16-72)
 Write-Host "  - Intel PPM         : CLOCK_WATCHDOG_TIMEOUT" -ForegroundColor White
 Write-Host "  - Intel Chipset     : driver corrotti" -ForegroundColor White
 Write-Host "==================================================================" -ForegroundColor Cyan
@@ -390,6 +413,7 @@ if ($gna) {
     Write-Log "  [OK] GNA: Non presente" "Green"
 }
 
+<<<<<<< HEAD
 # 4. HID Event Filter (necessario per touchpad/tasti Fn)
 $hid = $drivers | Where-Object { 
     $_.DeviceName -like "*HID Event Filter*" -or
@@ -399,6 +423,19 @@ if ($hid) {
     Write-Log "  [OK] HID Event Filter: $($hid.DriverVersion) [per touchpad/tasti Fn]" "Green"
 } else {
     Write-Log "  [-] HID Event Filter: Non presente (potrebbe servire per touchpad)" "Yellow"
+=======
+# 4. HID Event Filter
+$hid = $drivers | Where-Object { 
+    $_.DeviceName -like "*HID Event Filter*" -or
+    $_.InfName -like "*heci*" -or
+    $_.HardWareID -like "*INTC1070*"
+}
+if ($hid) {
+    Write-Log "  [!] HID Event Filter: $($hid.DriverVersion) [potenziale problema]" "Yellow"
+    $Issues += "HID"
+} else {
+    Write-Log "  [-] HID Event Filter: Non presente" "Gray"
+>>>>>>> dabfaea (Initial release: BSOD fix toolkit for Acer Predator PHN16-72)
 }
 
 # 5. Intel PPM (intelppm)
@@ -534,6 +571,27 @@ if ($Issues -contains "GNA") {
     }
 }
 
+<<<<<<< HEAD
+=======
+# HID Event Filter - Rimuovi se problematico
+if ($Issues -contains "HID") {
+    Write-Log "  Gestisco HID Event Filter..." "Yellow"
+    
+    if (!$DryRun) {
+        $hidDevices = Get-PnpDevice | Where-Object { 
+            $_.FriendlyName -like "*HID Event*" -or 
+            $_.InstanceId -like "*INTC1070*" 
+        }
+        foreach ($dev in $hidDevices) {
+            try {
+                Disable-PnpDevice -InstanceId $dev.InstanceId -Confirm:$false 2>$null
+                Write-Log "    Disabilitato: $($dev.FriendlyName)" "Green"
+            } catch { }
+        }
+    }
+}
+
+>>>>>>> dabfaea (Initial release: BSOD fix toolkit for Acer Predator PHN16-72)
 # Killer SOFTWARE (NON i driver WiFi!)
 if ($Issues -contains "KILLER_SW") {
     Write-Log "  Rimuovo Killer SOFTWARE (il driver WiFi resta)..." "Yellow"
@@ -654,7 +712,11 @@ if ($SkipDownload) {
     # Genera guida HTML
     $html = @"
 <!DOCTYPE html>
+<<<<<<< HEAD
 <html><head><meta charset="UTF-8"><title>PHN16-72 Driver Guide v7.6</title>
+=======
+<html><head><meta charset="UTF-8"><title>PHN16-72 Driver Guide v7.5</title>
+>>>>>>> dabfaea (Initial release: BSOD fix toolkit for Acer Predator PHN16-72)
 <style>
 body{font-family:Segoe UI,sans-serif;max-width:900px;margin:40px auto;padding:20px;background:#1a1a2e;color:#eee}
 h1{color:#00d4ff;border-bottom:2px solid #00d4ff;padding-bottom:10px}
@@ -673,7 +735,11 @@ th{background:#333}
 .bad{color:#ff4444}
 .good{color:#00ff88}
 </style></head><body>
+<<<<<<< HEAD
 <h1>PHN16-72 Driver Guide v7.6</h1>
+=======
+<h1>PHN16-72 Driver Guide v7.5</h1>
+>>>>>>> dabfaea (Initial release: BSOD fix toolkit for Acer Predator PHN16-72)
 
 <div class="critical">
 <h2>DRIVER CHE CAUSANO BSOD</h2>
@@ -683,6 +749,10 @@ th{background:#333}
 <tr><td class="bad">Intel DPTF (APO)</td><td>-</td><td>Richiede DTT 11405+</td><td>NON installare!</td></tr>
 <tr><td class="bad">Intel GNA</td><td>gna.inf</td><td>Vari BSOD</td><td>Bloccare</td></tr>
 <tr><td class="bad">Intel PPM</td><td>intelppm.sys</td><td>CLOCK_WATCHDOG_TIMEOUT</td><td>Disabilitare</td></tr>
+<<<<<<< HEAD
+=======
+<tr><td class="bad">Intel HID Filter</td><td>INTC1070</td><td>Freeze sistema</td><td>Disabilitare</td></tr>
+>>>>>>> dabfaea (Initial release: BSOD fix toolkit for Acer Predator PHN16-72)
 </table>
 </div>
 
@@ -709,7 +779,10 @@ th{background:#333}
 <li><b>LAN E3100G</b> - <span style="color:#ff8800">SENZA Killer Control Centre!</span></li>
 <li><b>Wireless LAN</b> - <span style="color:#ff8800">SENZA 1675i!</span></li>
 <li><b>Bluetooth</b> - Se non funziona</li>
+<<<<<<< HEAD
 <li><b>HID Event Filter</b> - Per touchpad e tasti Fn</li>
+=======
+>>>>>>> dabfaea (Initial release: BSOD fix toolkit for Acer Predator PHN16-72)
 </ol>
 <p style="margin-top:10px;color:#ff4444"><b>ATTENZIONE:</b> Per LAN e WLAN scegli le versioni SENZA software aggiuntivo!</p>
 </div>
@@ -717,7 +790,11 @@ th{background:#333}
 <div class="warning">
 <h2>NON SCARICARE MAI</h2>
 <ul>
+<<<<<<< HEAD
 <li><b>GNA</b> - Intel Gaussian Neural Accelerator (causa BSOD)</li>
+=======
+<li><b>GNA</b> - Intel Gaussian Neural Accelerator (BLOCCATO)</li>
+>>>>>>> dabfaea (Initial release: BSOD fix toolkit for Acer Predator PHN16-72)
 <li><b>DTT/DPTF versioni 11405+</b> - Causano BSOD</li>
 </ul>
 <p style="margin-top:15px"><b>NOTA WiFi:</b> Il driver Intel Killer AX1675i e' NECESSARIO (e' il chip WiFi del laptop). 
@@ -779,7 +856,11 @@ Il bloatware da evitare e' il SOFTWARE Killer Control Center, non il driver.</p>
 </div>
 
 <p style="margin-top:40px;color:#888;text-align:center">
+<<<<<<< HEAD
 Generato: $(Get-Date -Format "dd/MM/yyyy HH:mm") | PHN16-72 Setup v7.6
+=======
+Generato: $(Get-Date -Format "dd/MM/yyyy HH:mm") | PHN16-72 Setup v7.5
+>>>>>>> dabfaea (Initial release: BSOD fix toolkit for Acer Predator PHN16-72)
 </p>
 </body></html>
 "@
@@ -803,9 +884,14 @@ Generato: $(Get-Date -Format "dd/MM/yyyy HH:mm") | PHN16-72 Setup v7.6
     Write-Host "  7. [OK] LAN E3100G (SENZA Killer Control Centre!)" -ForegroundColor Green
     Write-Host "  8. [OK] Wireless LAN (SENZA 1675i!)" -ForegroundColor Green
     Write-Host "  9. [OK] Bluetooth (se necessario)" -ForegroundColor Green
+<<<<<<< HEAD
     Write-Host " 10. [OK] HID Event Filter (per touchpad/tasti Fn)" -ForegroundColor Green
     Write-Host "  ------------------------------------------------------------" -ForegroundColor Yellow
     Write-Host "  [X] NON scaricare: GNA" -ForegroundColor Red
+=======
+    Write-Host "  ------------------------------------------------------------" -ForegroundColor Yellow
+    Write-Host "  [X] NON scaricare: GNA, HID Event Filter" -ForegroundColor Red
+>>>>>>> dabfaea (Initial release: BSOD fix toolkit for Acer Predator PHN16-72)
     Write-Host "  ------------------------------------------------------------" -ForegroundColor Yellow
     Write-Host ""
     Write-Host "  SALVA I FILE ZIP (senza estrarre!) IN:" -ForegroundColor White
@@ -866,8 +952,11 @@ $InstallOrder = @{
     "killer"    = 6
     "bluetooth" = 7
     "bt_"       = 7      # bt_ per evitare match accidentali
+<<<<<<< HEAD
     "hid"       = 8      # HID Event Filter per touchpad/tasti Fn
     "intc1070"  = 8
+=======
+>>>>>>> dabfaea (Initial release: BSOD fix toolkit for Acer Predator PHN16-72)
 }
 
 # Driver da rimuovere prima dell'installazione (pulizia)
@@ -898,6 +987,13 @@ if ($SkipInstall) {
                 Write-Log "  [X] BLOCCATO: $($z.Name) [GNA - causa BSOD]" "Red"
                 continue
             }
+<<<<<<< HEAD
+=======
+            if ($name -match "hid.*event|hid.*filter|intc1070") {
+                Write-Log "  [X] BLOCCATO: $($z.Name) [HID Event Filter - causa freeze]" "Red"
+                continue
+            }
+>>>>>>> dabfaea (Initial release: BSOD fix toolkit for Acer Predator PHN16-72)
             if ($name -match "nvidia|geforce|rtx|gtx") {
                 Write-Log "  [i] SKIP: $($z.Name) [NVIDIA - installare manualmente]" "Cyan"
                 continue
@@ -909,12 +1005,15 @@ if ($SkipInstall) {
                 $vgaIntelZip = $z
                 continue
             }
+<<<<<<< HEAD
             # HID Event Filter - necessario per touchpad, ma può causare freeze
             # Lo installiamo ma con warning
             if ($name -match "hid.*event|hid.*filter") {
                 Write-Log "  [!] WARNING: $($z.Name) [HID Event Filter - necessario per touchpad]" "Yellow"
                 # Non bloccare, lascialo installare
             }
+=======
+>>>>>>> dabfaea (Initial release: BSOD fix toolkit for Acer Predator PHN16-72)
             $validZips += $z
         }
         
@@ -1321,7 +1420,11 @@ Write-Host "==================================================================" 
 # Genera script rollback
 $rollbackScript = @'
 #Requires -RunAsAdministrator
+<<<<<<< HEAD
 # PHN16-72 Rollback v7.6
+=======
+# PHN16-72 Rollback v7.5
+>>>>>>> dabfaea (Initial release: BSOD fix toolkit for Acer Predator PHN16-72)
 # Ripristina le impostazioni originali
 
 Write-Host "PHN16-72 Rollback" -ForegroundColor Yellow

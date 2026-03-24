@@ -1,0 +1,28 @@
+# Logs
+*.log
+
+# Driver downloads
+AcerDrivers_PHN16-72/
+
+# Temp files
+*.tmp
+*.bak
+
+# Windows
+Thumbs.db
+desktop.ini
+
+# .NET build output
+bin/
+obj/
+publish/
+
+# IDE
+.vs/
+*.suo
+*.user
+*.sln.docuser
+
+# NuGet
+*.nupkg
+packages/

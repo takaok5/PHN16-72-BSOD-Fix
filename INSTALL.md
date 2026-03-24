@@ -6,7 +6,7 @@
 
 📁 **Crea questa cartella:**
 ```
-C:\Users\TUONOME\Downloads\AcerDrivers_PHN16-72\
+C:\Users\%USERNAME%\Downloads\AcerDrivers_PHN16-72\
 ```
 
 📥 **Scarica questi driver e salvali nella cartella (NON estrarre i ZIP!):**
@@ -32,7 +32,7 @@ C:\Users\TUONOME\Downloads\AcerDrivers_PHN16-72\
 ### Metodo B: Git Clone
 
 ```powershell
-git clone https://github.com/TUOUSERNAME/PHN16-72-BSOD-Fix.git
+git clone https://github.com/takaok5/PHN16-72-BSOD-Fix.git
 cd PHN16-72-BSOD-Fix
 ```
 
@@ -65,7 +65,7 @@ Set-ExecutionPolicy -ExecutionPolicy Bypass -Scope Process
 ## 📁 Struttura cartelle
 
 ```
-C:\Users\TUONOME\
+C:\Users\%USERNAME%\
 └── Downloads\
     └── AcerDrivers_PHN16-72\      ← CREA QUESTA CARTELLA
         ├── Chipset_Intel_xxx.zip   ← Driver ZIP (non estratti)

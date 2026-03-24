@@ -39,7 +39,7 @@ Sconsigliato. Le versioni consigliate (11401/11404) sono state testate dalla com
 ### Lo script dice "Nessun ZIP trovato"
 Assicurati di aver salvato i driver nella cartella corretta:
 ```
-C:\Users\TUONOME\Downloads\AcerDrivers_PHN16-72\
+C:\Users\%USERNAME%\Downloads\AcerDrivers_PHN16-72\
 ```
 
 ### "Impossibile caricare il file ... perché l'esecuzione di script è disabilitata"

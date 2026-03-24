@@ -1,0 +1,43 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <RootNamespace>PredatorGuard</RootNamespace>
+    <AssemblyName>PredatorGuard</AssemblyName>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
+    <PlatformTarget>x64</PlatformTarget>
+    <SelfContained>true</SelfContained>
+    <PublishSingleFile>true</PublishSingleFile>
+    <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
+    <AssemblyVersion>1.0.0.0</AssemblyVersion>
+    <FileVersion>1.0.0.0</FileVersion>
+    <Description>MSR Lock Tool to prevent BSOD on Acer Predator laptops with intelppm.sys conflicts</Description>
+  </PropertyGroup>
+
+  <!-- WinRing0 native files: copied to output root (not lib/ subdir).
+       Condition prevents build failure when files are not yet downloaded.
+       Download from: https://github.com/GermanAizek/WinRing0/releases -->
+  <ItemGroup Condition="Exists('lib\WinRing0x64.dll')">
+    <None Include="lib\WinRing0x64.dll">
+      <Link>WinRing0x64.dll</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <ExcludeFromSingleFile>true</ExcludeFromSingleFile>
+    </None>
+    <None Include="lib\WinRing0x64.sys">
+      <Link>WinRing0x64.sys</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <ExcludeFromSingleFile>true</ExcludeFromSingleFile>
+    </None>
+  </ItemGroup>
+
+  <!-- Warn at build time if WinRing0 files are missing -->
+  <Target Name="CheckWinRing0" BeforeTargets="Build">
+    <Warning Text="WinRing0x64.dll not found in lib/. Download from https://github.com/GermanAizek/WinRing0/releases"
+             Condition="!Exists('lib\WinRing0x64.dll')" />
+  </Target>
+
+</Project>
