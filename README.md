@@ -11,8 +11,8 @@ Fixes BSOD crashes on Acer Predator Helios Neo 16 (PHN16-72) with Intel 14th Gen
 |-----------|-------------|
 | `HeliosPHN16-72_Setup.ps1` | Removes bad drivers (GNA, DPTF APO), blocks Windows Update reinstalls, installs stable versions |
 | `HeliosPHN16-72_Check.ps1` | Verifies all fixes are applied |
-| [`PredatorGuard/`](PredatorGuard/) | Locks CPU power registers (MSR) so PredatorSense can't cause instability |
-| [`THROTTLESTOP.md`](THROTTLESTOP.md) | Manual alternative: ThrottleStop settings that achieve the same MSR lock |
+| [`PredatorGuard/`](PredatorGuard/) | Simple hardcoded tool: applies fixed known-good power settings and locks CPU power registers |
+| [`THROTTLESTOP.md`](THROTTLESTOP.md) | Solid manual alternative: more customizable, but easier to misconfigure |
 
 ## Prerequisites
 
@@ -31,7 +31,7 @@ This removes known-bad drivers (GNA, DPTF APO, Killer bloatware), blocks Windows
 
 ### 2. Lock MSR registers (choose one)
 
-**Option A: PredatorGuard** (automated, open source)
+**Option A: PredatorGuard** (simple, automated, open source)
 
 ```bash
 PredatorGuard.exe --lock-only    # Lock current power limits
@@ -49,9 +49,11 @@ Requires [WinRing0](https://github.com/GermanAizek/WinRing0) driver. See [Predat
 
 > **Note:** WinRing0 is on Microsoft's Vulnerable Driver Blocklist. May require disabling Memory Integrity.
 
-**Option B: ThrottleStop** (GUI, more features)
+PredatorGuard is intentionally the simpler path: fixed profiles, no live tuning, less room for accidental misconfiguration.
 
-See [`THROTTLESTOP.md`](THROTTLESTOP.md) for the exact settings. Key points:
+**Option B: ThrottleStop** (solid GUI alternative, but riskier)
+
+See [`THROTTLESTOP.md`](THROTTLESTOP.md) for the exact settings. It is more customizable and more powerful, but also easier to get wrong. Key points:
 - TPL: PL1=115W, PL2=157W, **Lock=ON**
 - Speed Shift: Min=4, **Max=54** (caps turbo at 5.4 GHz)
 - EPP=0 (max performance)
@@ -95,7 +97,12 @@ Keep `intelppm` enabled on updated BIOS. It is no longer a standard fix to disab
 
 ## Why this works
 
-PredatorSense writes CPU power limit registers (MSR 0x610) at runtime. These writes can conflict with the OS power manager, causing BSOD. Both PredatorGuard and ThrottleStop solve this by:
+PredatorSense writes CPU power limit registers (MSR 0x610) at runtime. These writes can conflict with the OS power manager, causing BSOD. Both PredatorGuard and ThrottleStop solve the same core problem, but with different tradeoffs:
+
+- PredatorGuard uses hardcoded known-good presets and a minimal workflow.
+- ThrottleStop gives you much deeper control, which is powerful but inherently riskier.
+
+Both approaches rely on:
 
 1. Writing safe power limits to MSR 0x610
 2. Setting bit 63 (hardware LOCK) — CPU ignores all subsequent writes until reboot

@@ -2,7 +2,7 @@
 
 These are the proven ThrottleStop 9.7 settings that prevent BSOD and stabilize the Acer Predator PHN16-72 with i9-14900HX. These settings have been tested for weeks without a single crash.
 
-**PredatorGuard automates these same MSR writes.** If you prefer a GUI with real-time monitoring, use ThrottleStop instead. Both achieve the same result.
+**ThrottleStop is a solid alternative, but it is also the riskier one** because it exposes far more tuning knobs. `PredatorGuard` exists for the opposite goal: a simple hardcoded tool with fixed known-good values and a smaller mistake surface.
 
 ![ThrottleStop Settings](docs/throttlestop-settings.png)
 
@@ -103,8 +103,9 @@ This is the critical section that prevents PredatorSense from crashing the syste
 
 | Feature | ThrottleStop | PredatorGuard |
 |---------|-------------|---------------|
+| Stability approach | Powerful but highly customizable | Simple hardcoded known-good presets |
 | MSR Lock | Yes | Yes |
-| Power Profiles | Manual GUI | CLI with presets |
+| Power Profiles | Manual GUI | CLI with fixed presets |
 | Turbo Cap | Yes (Speed Shift Max) | Yes (MSR 0x1AD) |
 | Real-time Monitoring | Yes (temps, clocks, power) | No |
 | Undervolt | Yes | No |
@@ -113,5 +114,5 @@ This is the critical section that prevents PredatorSense from crashing the syste
 | Open Source | No | Yes |
 | Dependencies | None | WinRing0 driver |
 
-**Use ThrottleStop if:** you want a GUI, real-time monitoring, undervolting, or fine control.
-**Use PredatorGuard if:** you want a lightweight, zero-UI, open-source tool that just locks MSR at boot.
+**Use ThrottleStop if:** you know exactly what you are changing and want GUI control, monitoring, undervolting, or deeper customization.
+**Use PredatorGuard if:** you want the simpler and safer default path: a lightweight, zero-UI tool with hardcoded presets that just applies known-good values and locks power limits at boot.

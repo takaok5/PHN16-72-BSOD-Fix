@@ -1,8 +1,8 @@
 # PredatorGuard
 
-**MSR Lock Tool for Acer Predator Laptops**
+**Simple Hardcoded Power-Limit Lock Tool for Acer Predator Laptops**
 
-Locks CPU power limit registers to prevent PredatorSense from overwriting them, ensuring stable power management.
+Locks CPU power limit registers to prevent PredatorSense from overwriting them, using fixed known-good presets instead of live manual tuning.
 
 ## Why
 
@@ -10,9 +10,11 @@ PredatorSense writes CPU power limit registers (MSR 0x610) at runtime. These unc
 
 Additionally, it caps turbo boost at 5.4 GHz (stock 5.8 GHz on i9-14900HX) to reduce power spikes that trigger aggressive PredatorSense intervention.
 
+This is deliberately the simple option. If you want deep manual control, use ThrottleStop instead.
+
 ## What it does
 
-1. **Writes safe PL1/PL2 power limits** to MSR 0x610 (values from proven ThrottleStop config)
+1. **Writes safe PL1/PL2 power limits** to MSR 0x610 (fixed values from a proven ThrottleStop config)
 2. **Sets the hardware LOCK bit** (bit 63) — CPU ignores all writes to MSR 0x610 until reboot
 3. **Caps turbo boost ratios** via MSR 0x1AD to prevent instability at extreme frequencies
 4. **Configures Speed Shift** (HWP) with proper min/max ratios and EPP on all logical processors
@@ -56,7 +58,7 @@ PredatorGuard.exe --help           # Show help
 | **Balanced** | 35W | 55W | 3.0 GHz | 128 (balanced) | Stock |
 | **Battery** | 35W | 55W | 2.0 GHz | 200 (efficient) | Stock |
 
-Profile values are derived from a working ThrottleStop configuration on the i9-14900HX.
+Profile values are derived from a working ThrottleStop configuration on the i9-14900HX, then hardcoded here to keep the tool simple and repeatable.
 
 ## Run at Boot (Task Scheduler)
 
@@ -96,7 +98,7 @@ dotnet publish -c Release -r win-x64
 
 **USE AT YOUR OWN RISK.** This tool writes to CPU Model-Specific Registers which requires kernel-level access. Incorrect MSR values can cause system instability. The profiles are specific to the i9-14900HX and may not be appropriate for other CPUs.
 
-This tool does NOT replace ThrottleStop for advanced features like undervolting or monitoring.
+This tool does NOT replace ThrottleStop for advanced features like undervolting, monitoring, or fine-grained experimentation. That tradeoff is intentional: PredatorGuard is the simpler hardcoded path.
 
 ## Credits
 
