@@ -1,10 +1,6 @@
 #Requires -RunAsAdministrator
 # ============================================================================
-<<<<<<< HEAD
 # PHN16-72 Setup v7.6
-=======
-# PHN16-72 Setup v7.5
->>>>>>> dabfaea (Initial release: BSOD fix toolkit for Acer Predator PHN16-72)
 # ============================================================================
 # BASATO SU SOLUZIONI DOCUMENTATE DALLA COMMUNITY ACER:
 # - https://community.acer.com/en/discussion/723737 (artkirius - SOLVED)
