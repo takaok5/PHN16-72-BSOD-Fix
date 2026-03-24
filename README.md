@@ -64,6 +64,26 @@ See [`THROTTLESTOP.md`](THROTTLESTOP.md) for the exact settings. Key points:
 .\HeliosPHN16-72_Check.ps1
 ```
 
+## Correct drivers to install
+
+Download these from Acer for the PHN16-72:
+
+| Driver | Correct version / variant | Notes |
+|--------|----------------------------|-------|
+| Intel Chipset | Acer package | Install first. Includes Serial IO / I2C base support |
+| Intel ME | Acer package | Intel Management Engine |
+| Intel DPTF | **Without APO**, version **1.0.11401** | This is the stable Acer package |
+| Intel DTT | **9.0.11404.x** or earlier | Do not use 11405+ |
+| Intel IPF | **1.0.11404.x** or earlier | Stable with the setup here |
+| Intel VGA | **UMA** package | Install manually if the script prompts you |
+| Realtek Audio | Acer package | Standard audio driver |
+| LAN | **E3100G without Killer Control Center** | Keep the driver, avoid the extra software |
+| Wireless LAN | Acer package for the built-in WiFi card | The WiFi driver is required |
+| Bluetooth | Acer package | Install if needed |
+| HID Event Filter | Acer package | Needed for touchpad / Fn keys on some systems |
+
+Keep `intelppm` enabled on updated BIOS. It is no longer a standard fix to disable it.
+
 ## PredatorGuard Profiles (i9-14900HX)
 
 | Profile | PL1 | PL2 | Max Freq | EPP | Turbo Cap |
