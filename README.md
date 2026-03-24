@@ -1,157 +1,114 @@
-# Acer Predator Helios Neo 16 (PHN16-72) — Stability Toolkit
+# Acer Predator PHN16-72 — BSOD Fix & Stability Toolkit
 
 ![Windows 11](https://img.shields.io/badge/Windows-11-blue?logo=windows11)
-![PowerShell](https://img.shields.io/badge/PowerShell-5.1+-blue?logo=powershell)
-![.NET 10](https://img.shields.io/badge/.NET-10-purple?logo=dotnet)
 ![License](https://img.shields.io/badge/License-MIT-green)
 
-A collection of tools to fix BSOD crashes and improve stability on the Acer Predator Helios Neo 16 (PHN16-72) with Intel 14th Gen CPUs (i9-14900HX).
+Fixes BSOD crashes on Acer Predator Helios Neo 16 (PHN16-72) with Intel 14th Gen CPUs.
 
-## Current Status (2025+)
-
-**Good news:** Acer has released a BIOS update that fixes the `intelppm.sys` conflict. With the latest BIOS, Intel PPM works correctly and no longer needs to be disabled.
-
-**What still matters:**
-- **PredatorGuard** — Locks MSR registers to prevent PredatorSense from overwriting CPU power limits (still needed even with new BIOS)
-- **PredatorMonitor** — System tray app for temperature/fan monitoring via Acer WMI
-- **Driver setup script** — Removes known-bad drivers (GNA, HID Event Filter, DPTF APO) and blocks Windows Update from reinstalling them
-
-## Repository Structure
+## What's in this repo
 
 | Component | What it does |
 |-----------|-------------|
-| [`PredatorGuard/`](PredatorGuard/) | MSR lock tool — writes safe power limits and locks them so PredatorSense can't cause conflicts |
-| [`PredatorMonitor/`](PredatorMonitor/) | System tray app — CPU/GPU temps, fan RPM, fan control, PredatorSense profile detection |
-| `HeliosPHN16-72_Setup.ps1` | Driver cleanup script — removes bad drivers, blocks WU reinstall, installs stable versions |
-| `HeliosPHN16-72_Check.ps1` | Verification script — checks all fixes are applied |
+| `HeliosPHN16-72_Setup.ps1` | Removes bad drivers (GNA, DPTF APO), blocks Windows Update reinstalls, installs stable versions |
+| `HeliosPHN16-72_Check.ps1` | Verifies all fixes are applied |
+| [`PredatorGuard/`](PredatorGuard/) | Locks CPU power registers (MSR) so PredatorSense can't cause instability |
+| [`THROTTLESTOP.md`](THROTTLESTOP.md) | Manual alternative: ThrottleStop settings that achieve the same MSR lock |
 
----
+## Prerequisites
 
-## PredatorGuard — MSR Lock Tool
+**Update your BIOS first.** The latest Acer BIOS fixes the `intelppm.sys` conflict. Intel PPM no longer needs to be disabled.
 
-PredatorSense writes CPU power limit registers (MSR 0x610) at runtime. Even with the new BIOS, these writes can cause instability when they conflict with the OS power manager. PredatorGuard:
+## Quick Start
 
-1. **Writes safe PL1/PL2 power limits** to MSR 0x610 (from proven ThrottleStop config)
-2. **Sets the hardware LOCK bit** (bit 63) — CPU ignores all further writes until reboot
-3. **Caps turbo boost at 5.4 GHz** via MSR 0x1AD (stock 5.8 GHz causes unnecessary power spikes)
-4. **Configures Speed Shift** (HWP) with proper EPP per profile
+### 1. Run the driver cleanup script
 
-```bash
-PredatorGuard.exe                  # Apply Performance profile + lock
-PredatorGuard.exe --profile game   # Apply Game profile
-PredatorGuard.exe --lock-only      # Lock current values without changing
-PredatorGuard.exe --status         # Show current MSR values
+```powershell
+Set-ExecutionPolicy -ExecutionPolicy Bypass -Scope Process
+.\HeliosPHN16-72_Setup.ps1
 ```
 
-### Profiles (i9-14900HX)
+This removes known-bad drivers (GNA, DPTF APO, Killer bloatware), blocks Windows Update from reinstalling them, and installs stable driver versions in the correct order.
+
+### 2. Lock MSR registers (choose one)
+
+**Option A: PredatorGuard** (automated, open source)
+
+```bash
+PredatorGuard.exe --lock-only    # Lock current power limits
+PredatorGuard.exe                # Apply Performance profile + lock
+PredatorGuard.exe --profile game # Apply Game profile + lock
+PredatorGuard.exe --status       # Show current MSR values
+```
+
+Set up Task Scheduler to run at boot:
+```powershell
+schtasks /create /tn "PredatorGuard" /tr "`"C:\path\to\PredatorGuard.exe`" --lock-only" /sc onstart /rl highest /ru SYSTEM /f
+```
+
+Requires [WinRing0](https://github.com/GermanAizek/WinRing0) driver. See [PredatorGuard/README.md](PredatorGuard/README.md).
+
+> **Note:** WinRing0 is on Microsoft's Vulnerable Driver Blocklist. May require disabling Memory Integrity.
+
+**Option B: ThrottleStop** (GUI, more features)
+
+See [`THROTTLESTOP.md`](THROTTLESTOP.md) for the exact settings. Key points:
+- TPL: PL1=115W, PL2=157W, **Lock=ON**
+- Speed Shift: Min=4, **Max=54** (caps turbo at 5.4 GHz)
+- EPP=0 (max performance)
+
+![ThrottleStop Settings](docs/throttlestop-settings.png)
+
+### 3. Verify
+
+```powershell
+.\HeliosPHN16-72_Check.ps1
+```
+
+## PredatorGuard Profiles (i9-14900HX)
 
 | Profile | PL1 | PL2 | Max Freq | EPP | Turbo Cap |
 |---------|-----|-----|----------|-----|-----------|
 | **Performance** | 115W | 157W | 5.4 GHz | 0 (max perf) | 5.4 GHz |
 | **Game** | 55W | 157W | 5.4 GHz | 0 (max perf) | 5.4 GHz |
-| **Balanced** | 35W | 55W | 3.0 GHz | 128 (balanced) | Stock |
-| **Battery** | 35W | 55W | 2.0 GHz | 200 (efficient) | Stock |
+| **Balanced** | 35W | 55W | 3.0 GHz | 128 | Stock |
+| **Battery** | 35W | 55W | 2.0 GHz | 200 | Stock |
 
-### Run at boot
+## Why this works
 
-```powershell
-schtasks /create /tn "PredatorGuard" /tr "`"C:\path\to\PredatorGuard.exe`" --lock-only" /sc onstart /rl highest /ru SYSTEM /f
-```
+PredatorSense writes CPU power limit registers (MSR 0x610) at runtime. These writes can conflict with the OS power manager, causing BSOD. Both PredatorGuard and ThrottleStop solve this by:
 
-### WinRing0 Requirement
+1. Writing safe power limits to MSR 0x610
+2. Setting bit 63 (hardware LOCK) — CPU ignores all subsequent writes until reboot
+3. Capping turbo at 5.4 GHz (MSR 0x1AD) to reduce power spikes
 
-PredatorGuard requires [WinRing0](https://github.com/GermanAizek/WinRing0) for ring-0 MSR access. Place `WinRing0x64.dll` and `WinRing0x64.sys` next to the executable.
-
-> **Note:** WinRing0x64.sys is on Microsoft's [Vulnerable Driver Blocklist](https://learn.microsoft.com/en-us/windows/security/application-security/application-control/app-control-for-business/design/microsoft-recommended-driver-block-rules). If Memory Integrity (HVCI) is enabled, the driver won't load. You may need to disable it in Windows Security > Device Security > Core Isolation.
-
-WinRing0 binaries are not included. Get them from [ThrottleStop](https://www.techpowerup.com/download/techpowerup-throttlestop/) or build from [source](https://github.com/GermanAizek/WinRing0).
-
-See [PredatorGuard/README.md](PredatorGuard/README.md) for full details.
-
----
-
-## PredatorMonitor — System Tray App
-
-Lightweight monitoring via Acer WMI:
-- CPU/GPU temperatures
-- Fan RPM (both fans)
-- PredatorSense profile detection (Quiet / Default / Performance / Turbo)
-- Fan control (Auto, Turbo, manual %)
-- Quick-launch ThrottleStop / OpenRGB
-
----
-
-## Driver Setup Script (Legacy)
-
-> **Note:** With the latest Acer BIOS, the intelppm fix (disabling Intel PPM) is **no longer needed**. The script still includes it as an option (`-SkipIntelppmFix` to skip), but the main value is now the cleanup of other bad drivers.
-
-### What it does
-
-| Fix | Description |
-|-----|-------------|
-| **GNA** | Removes Intel GNA driver + blocks reinstall |
-| **HID Filter** | Disables Intel HID Event Filter (INTC1070) |
-| **DTT/DPTF** | Removes DTT versions > 11404 |
-| **Windows Update** | Blocks driver reinstall for ~100 Hardware IDs |
-| **intelppm** | *(Optional)* Disables Intel PPM — no longer needed with new BIOS |
-
-### Usage
-
-```powershell
-# Run with admin privileges
-Set-ExecutionPolicy -ExecutionPolicy Bypass -Scope Process
-.\HeliosPHN16-72_Setup.ps1
-
-# Skip the intelppm fix (recommended with new BIOS)
-.\HeliosPHN16-72_Setup.ps1 -SkipIntelppmFix
-
-# Dry run
-.\HeliosPHN16-72_Setup.ps1 -DryRun
-
-# Verify fixes
-.\HeliosPHN16-72_Check.ps1
-```
-
-### Drivers to avoid
+## Drivers to avoid
 
 | Driver | Reason |
 |--------|--------|
 | Intel GNA | Various BSOD |
 | Intel DPTF (APO) | Requires DTT 11405+ which crashes |
-| Intel HID Event Filter | System freeze |
+| Killer Control Center | Bloatware (WiFi driver itself is fine) |
 
-### Driver installation order
+## Disclaimer
 
-```
-1. Chipset Intel    (base for touchpad, I2C)
-2. ME               (Management Engine)
-3. DPTF             (version 11401, NOT APO)
-4. VGA Intel UMA    (manual install via Device Manager)
-5. NVIDIA           (manual install)
-6. Audio Realtek
-7. LAN Ethernet
-8. WiFi
-9. Bluetooth
-```
+**USE AT YOUR OWN RISK.** This toolkit modifies Windows registry settings, removes/blocks system drivers, and writes to CPU Model-Specific Registers (MSR) via a kernel-level driver. While these changes have been tested and are based on documented community solutions, they involve low-level system modifications that could cause instability, data loss, or hardware issues if misapplied.
 
----
+The authors assume **no responsibility** for any damage, data loss, hardware failure, voided warranty, or any other consequence resulting from the use of these tools and scripts. By using this software you acknowledge that:
 
-## BIOS
+- You understand the risks of modifying CPU registers and system drivers
+- You have backed up your data before applying any changes
+- You are solely responsible for any outcome
+- The power profiles are specific to the i9-14900HX and may not be appropriate for other CPUs
+- WinRing0 is classified as a vulnerable driver by Microsoft — using it requires disabling security features
 
-**Update your BIOS first.** The latest Acer BIOS for PHN16-72 fixes the intelppm conflict. After updating:
-
-- Intel PPM can stay enabled (no need to disable)
-- PredatorGuard is still recommended to lock MSR registers
-- Driver cleanup (GNA, HID, DPTF APO) is still recommended
-
----
+**Always update your BIOS first** and create a system restore point before running any script.
 
 ## License
 
-MIT License — See [LICENSE](LICENSE)
+MIT — See [LICENSE](LICENSE)
 
 ## Credits
 
-- **artkirius**, **jihakkim**, **Puraw**, **StevenGen** — Acer Community fixes and testing
-- **[WinRing0](https://github.com/GermanAizek/WinRing0)** — Kernel driver for MSR access (original: [OpenLibSys](http://openlibsys.org/) by hiyohiyo, BSD License)
-- **[ThrottleStop](https://www.techpowerup.com/download/techpowerup-throttlestop/)** by Kevin Glynn — Reference MSR values and inspiration
+- **artkirius**, **jihakkim**, **Puraw**, **StevenGen** — Acer Community
+- **[ThrottleStop](https://www.techpowerup.com/download/techpowerup-throttlestop/)** by Kevin Glynn — MSR reference values
+- **[WinRing0](https://github.com/GermanAizek/WinRing0)** — Kernel driver for MSR access (OpenLibSys, BSD License)
