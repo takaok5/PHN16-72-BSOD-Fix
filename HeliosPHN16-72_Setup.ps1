@@ -2,48 +2,48 @@
 # ============================================================================
 # PHN16-72 Setup v7.6
 # ============================================================================
-# BASATO SU SOLUZIONI DOCUMENTATE DALLA COMMUNITY ACER:
+# BASED ON DOCUMENTED SOLUTIONS FROM THE ACER COMMUNITY:
 # - https://community.acer.com/en/discussion/723737 (artkirius - SOLVED)
 # - https://community.acer.com/en/discussion/728746 (jihakkim - intelppm fix)
 # - https://community.acer.com/en/discussion/728578 (Puraw - clean install)
 # - https://community.acer.com/en/discussion/726672 (StevenGen - setup)
 #
-# DRIVER PROBLEMATICI IDENTIFICATI:
-# 1. Intel DPTF/DTT (dtt_sw.inf) - crash termici, conflitto PredatorSense
-# 2. Intel GNA (gna.inf) - BSOD vari
-# 3. Intel HID Event Filter (INTC1070) - freeze sistema
-# 4. Intel Chipset (RaptorLakeSystem.inf) - driver corrotti
-# 5. Intel PPM (intelppm.sys) - fixed by BIOS update, no longer needs disabling
+# IDENTIFIED PROBLEMATIC DRIVERS:
+# 1. Intel DPTF/DTT (dtt_sw.inf) - thermal crashes, PredatorSense conflict
+# 2. Intel GNA (gna.inf) - various BSOD
+# 3. Intel HID Event Filter (INTC1070) - system freeze
+# 4. Intel Chipset (RaptorLakeSystem.inf) - corrupt drivers
+# 5. Intel PPM (intelppm.sys) - keep enabled on updated Acer BIOS
+#    PredatorGuard is a separate optional tool for locking MSR writes
 #
-# FIX APPLICATI:
-# - intelppm: fixed by BIOS update (legacy fix still available with -DisableIntelppm)
-# - Rimuove/blocca tutti i driver problematici
-# - Blocca reinstallazione via Windows Update
-# - Installa versioni stabili DTT/IPF
-# - Rimuove Killer SOFTWARE (non il driver WiFi - e' necessario!)
+# APPLIED FIXES:
+# - Removes/blocks all problematic drivers
+# - Blocks reinstallation via Windows Update
+# - Installs stable DTT/IPF versions
+# - Removes Killer SOFTWARE (not the WiFi driver - it's needed!)
 #
-# NOTA: Intel Killer AX1675i e' il chip WiFi standard del PHN16-72.
-#       Intel ha acquisito Killer, quindi il driver "Killer" = driver Intel.
-#       Il BLOATWARE e' il software Killer Control Center, non il driver.
+# NOTE: Intel Killer AX1675i is the standard WiFi chip of the PHN16-72.
+#       Intel acquired Killer, so the "Killer" driver = Intel driver.
+#       The BLOATWARE is the Killer Control Center software, not the driver.
 #
-# IMPORTANTE: Sul sito Acer ci sono DUE versioni di DPTF:
-#   - DPTF (APO) = richiede DTT 11405+ = CAUSA BSOD! NON INSTALLARE!
-#   - DPTF (senza APO) = DTT 11401 o precedente = STABILE, installare questa!
+# IMPORTANT: On the Acer site there are TWO versions of DPTF:
+#   - DPTF (APO) = requires DTT 11405+ = CAUSES BSOD! DO NOT INSTALL!
+#   - DPTF (without APO) = DTT 11401 or earlier = STABLE, install this one!
 # ============================================================================
 
 param(
     [switch]$SkipDownload,
     [switch]$SkipInstall,
     [switch]$DryRun,
-    [switch]$DisableIntelppm  # Opt-in: disabilita intelppm (solo per BIOS vecchi)
+    [switch]$DisableIntelppm  # Opt-in: disable intelppm (only for old BIOS)
 )
 
-# Auto-rilancio come Amministratore se necessario
+# Auto-relaunch as Administrator if needed
 if (-not ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {
     Write-Host ""
-    Write-Host "  Rilancio come Amministratore..." -ForegroundColor Yellow
+    Write-Host "  Relaunching as Administrator..." -ForegroundColor Yellow
 
-    # Ricostruisce gli argomenti
+    # Rebuild arguments
     $argList = @("-NoProfile", "-ExecutionPolicy", "Bypass", "-File", "`"$PSCommandPath`"")
     if ($SkipDownload)     { $argList += "-SkipDownload" }
     if ($SkipInstall)      { $argList += "-SkipInstall" }
@@ -56,13 +56,13 @@ if (-not ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdenti
     } catch {
         Write-Host ""
         Write-Host "  ============================================================" -ForegroundColor Red
-        Write-Host "  ERRORE: Impossibile ottenere privilegi Amministratore!" -ForegroundColor Red
+        Write-Host "  ERROR: Unable to obtain Administrator privileges!" -ForegroundColor Red
         Write-Host "  ============================================================" -ForegroundColor Red
         Write-Host ""
-        Write-Host "  Come fare manualmente:" -ForegroundColor Yellow
-        Write-Host "  1. Cerca 'PowerShell' nel menu Start" -ForegroundColor White
-        Write-Host "  2. Click destro -> 'Esegui come amministratore'" -ForegroundColor White
-        Write-Host "  3. Naviga alla cartella dello script e riesegui" -ForegroundColor White
+        Write-Host "  How to do it manually:" -ForegroundColor Yellow
+        Write-Host "  1. Search for 'PowerShell' in the Start menu" -ForegroundColor White
+        Write-Host "  2. Right-click -> 'Run as administrator'" -ForegroundColor White
+        Write-Host "  3. Navigate to the script folder and re-run it" -ForegroundColor White
         Write-Host ""
         exit 1
     }
@@ -70,23 +70,23 @@ if (-not ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdenti
 
 $ErrorActionPreference = "SilentlyContinue"
 
-# Percorsi
+# Paths
 $DownloadPath = "$env:USERPROFILE\Downloads\AcerDrivers_PHN16-72"
 $TempPath = "$env:TEMP\AcerDriverSetup"
 $LogFile = "$env:USERPROFILE\Desktop\PHN16-72_Setup_$(Get-Date -Format 'yyyyMMdd_HHmmss').log"
 
-# Versioni stabili (PRE-BSOD)
+# Stable versions (PRE-BSOD)
 $DTT_STABLE = "9.0.11404"
 $IPF_STABLE = "1.0.11404"
 
 # URL
 $Acer_URL = "https://www.acer.com/it-it/support/product-support/Predator_PHN16-72"
 
-# Hardware IDs da bloccare (impedisce a Windows Update di sovrascrivere i driver)
-# NOTA: Blocchiamo TUTTI i driver che installiamo manualmente per evitare aggiornamenti automatici
+# Hardware IDs to block (prevents Windows Update from overwriting drivers)
+# NOTE: We block ALL drivers we install manually to prevent automatic updates
 
 $BLOCKED_HWIDS = @(
-    # === DRIVER PROBLEMATICI (SEMPRE BLOCCATI) ===
+    # === PROBLEMATIC DRIVERS (ALWAYS BLOCKED) ===
     # GNA - Gaussian Neural Accelerator
     "PCI\VEN_8086&DEV_464F",
     "PCI\VEN_8086&DEV_4E11",
@@ -158,7 +158,7 @@ $BLOCKED_HWIDS = @(
     "PCI\VEN_8086&DEV_A78B",
 
     # === AUDIO REALTEK ===
-    "HDAUDIO\FUNC_01&VEN_10EC*",  # Pattern Realtek HD Audio
+    "HDAUDIO\FUNC_01&VEN_10EC*",  # Realtek HD Audio pattern
     "INTELAUDIO\FUNC_01&VEN_10EC*",
 
     # === LAN (ETHERNET) ===
@@ -194,19 +194,19 @@ $BLOCKED_HWIDS = @(
     "USB\VID_8087&PID_0025"
 )
 
-# Driver INF da bloccare/rimuovere
+# Driver INFs to block/remove
 $BLOCKED_INFS = @(
     "gna.inf",
-    "intcaudiobus.inf"  # A volte causa problemi
+    "intcaudiobus.inf"  # Sometimes causes issues
 )
 
-# Driver che causano BSOD (versioni specifiche)
+# Drivers that cause BSOD (specific versions)
 $BSOD_DRIVERS = @{
-    "dtt" = @("11405", "11407", "117", "118", "119")  # Tutte le versioni dopo 11404
+    "dtt" = @("11405", "11407", "117", "118", "119")  # All versions after 11404
     "ipf" = @("11405", "11407", "117", "118", "119")
 }
 
-# Funzione log
+# Log function
 function Write-Log {
     param([string]$Message, [string]$Color = "White")
     $ts = Get-Date -Format "HH:mm:ss"
@@ -215,7 +215,7 @@ function Write-Log {
     Add-Content -Path $LogFile -Value $logMsg
 }
 
-# Creazione cartelle
+# Create folders
 if (!(Test-Path $DownloadPath)) { New-Item -ItemType Directory -Path $DownloadPath -Force | Out-Null }
 if (!(Test-Path $TempPath)) { New-Item -ItemType Directory -Path $TempPath -Force | Out-Null }
 
@@ -224,61 +224,61 @@ Write-Host ""
 Write-Host "==================================================================" -ForegroundColor Cyan
 Write-Host "           PHN16-72 BSOD FIX SCRIPT v7.6" -ForegroundColor Cyan
 Write-Host "==================================================================" -ForegroundColor Cyan
-Write-Host "  Basato su soluzioni Community Acer (artkirius, jihakkim)" -ForegroundColor Gray
+Write-Host "  Based on Acer Community solutions (artkirius, jihakkim)" -ForegroundColor Gray
 Write-Host "------------------------------------------------------------------" -ForegroundColor Cyan
 Write-Host ""
-Write-Host "  DOVE SCARICARE I DRIVER:" -ForegroundColor Yellow
+Write-Host "  WHERE TO DOWNLOAD DRIVERS:" -ForegroundColor Yellow
 Write-Host "  $Acer_URL" -ForegroundColor White
 Write-Host ""
-Write-Host "  DOVE SALVARE I DRIVER (file ZIP, non estratti!):" -ForegroundColor Yellow
+Write-Host "  WHERE TO SAVE DRIVERS (ZIP files, not extracted!):" -ForegroundColor Yellow
 Write-Host "  $DownloadPath" -ForegroundColor White
 Write-Host ""
 Write-Host "------------------------------------------------------------------" -ForegroundColor Cyan
-Write-Host "  Driver problematici da gestire:" -ForegroundColor White
-Write-Host "  - Intel DPTF/DTT    : versioni 11405+ causano crash" -ForegroundColor White
-Write-Host "  - Intel GNA         : BSOD vari" -ForegroundColor White
-Write-Host "  - Intel PPM         : CLOCK_WATCHDOG_TIMEOUT" -ForegroundColor White
-Write-Host "  - Intel Chipset     : driver corrotti" -ForegroundColor White
+Write-Host "  Problematic drivers to handle:" -ForegroundColor White
+Write-Host "  - Intel DPTF/DTT    : install Acer DPTF 11401, avoid 11405+/APO" -ForegroundColor White
+Write-Host "  - Intel GNA         : various BSOD" -ForegroundColor White
+Write-Host "  - Intel PPM         : keep enabled on updated BIOS" -ForegroundColor Gray
+Write-Host "  - Intel Chipset     : corrupt drivers" -ForegroundColor White
 Write-Host "==================================================================" -ForegroundColor Cyan
 Write-Host ""
-Write-Log "Script avviato - Log: $LogFile"
+Write-Log "Script started - Log: $LogFile"
 Write-Host ""
 
 # ============================================================================
-# FASE 1: DIAGNOSTICA COMPLETA
+# PHASE 1: FULL DIAGNOSTICS
 # ============================================================================
 
 Write-Host "==================================================================" -ForegroundColor Cyan
-Write-Host " [1/7] DIAGNOSTICA DRIVER" -ForegroundColor Cyan
+Write-Host " [1/7] DRIVER DIAGNOSTICS" -ForegroundColor Cyan
 Write-Host "==================================================================" -ForegroundColor Cyan
 
 $drivers = Get-WmiObject Win32_PnPSignedDriver 2>$null |
     Select-Object DeviceName, DriverVersion, InfName, Manufacturer, HardWareID
 
 if (!$drivers) {
-    Write-Log "ERRORE: impossibile leggere driver WMI!" "Red"
+    Write-Log "ERROR: unable to read WMI drivers!" "Red"
     exit 1
 }
 
-# Stato driver
+# Driver status
 $Issues = @()
 
-# 1. DTT/DPTF - RILEVAMENTO MULTIPLO
-# NOTA: Il pacchetto DPTF Acer spesso NON appare in Device Manager!
-# Dobbiamo cercare: servizio ESIF, cartella installazione, programmi, registro
+# 1. DTT/DPTF - MULTI-METHOD DETECTION
+# NOTE: The Acer DPTF package often does NOT appear in Device Manager!
+# We must search: ESIF service, installation folder, programs, registry
 
 $dptfFound = $false
 $dptfVersion = ""
 $dptfSource = ""
 
-# Metodo 1: Servizio ESIF (più affidabile)
+# Method 1: ESIF Service (most reliable)
 $esifSvc = Get-Service "esifsvc*" 2>$null
 if ($esifSvc) {
     $dptfFound = $true
-    $dptfSource = "servizio $($esifSvc.Name)"
+    $dptfSource = "service $($esifSvc.Name)"
 }
 
-# Metodo 2: Cartella installazione Intel DTT
+# Method 2: Intel DTT installation folder
 $dttPaths = @(
     "$env:ProgramFiles\Intel\Intel(R) Dynamic Tuning Technology",
     "$env:ProgramFiles\Intel\DPTF",
@@ -290,21 +290,21 @@ foreach ($path in $dttPaths) {
         $esifExe = Get-ChildItem "$path\esif*.exe" -EA 0 | Select-Object -First 1
         if ($esifExe) {
             $dptfVersion = $esifExe.VersionInfo.FileVersion
-            $dptfSource = "cartella: $path"
+            $dptfSource = "folder: $path"
         }
         break
     }
 }
 
-# Metodo 3: Programmi installati (Add/Remove Programs)
+# Method 3: Installed programs (Add/Remove Programs)
 $installedDptf = Get-Package "*Dynamic Tuning*","*DPTF*","*Thermal Framework*" 2>$null | Select-Object -First 1
 if ($installedDptf) {
     $dptfFound = $true
     $dptfVersion = $installedDptf.Version
-    $dptfSource = "programma: $($installedDptf.Name)"
+    $dptfSource = "program: $($installedDptf.Name)"
 }
 
-# Metodo 4: Registro di sistema
+# Method 4: System registry
 $regPaths = @(
     "HKLM:\SOFTWARE\Intel\DPTF",
     "HKLM:\SOFTWARE\Intel\DTT"
@@ -314,11 +314,11 @@ foreach ($regPath in $regPaths) {
         $dptfFound = $true
         $regVer = (Get-ItemProperty $regPath -Name "Version" -EA 0).Version
         if ($regVer -and !$dptfVersion) { $dptfVersion = $regVer }
-        if (!$dptfSource) { $dptfSource = "registro: $regPath" }
+        if (!$dptfSource) { $dptfSource = "registry: $regPath" }
     }
 }
 
-# Metodo 5: Device Manager (fallback)
+# Method 5: Device Manager (fallback)
 $dtt = $drivers | Where-Object {
     $_.DeviceName -like "*Dynamic Tuning*" -or
     $_.DeviceName -like "*Dynamic Platform*" -or
@@ -336,23 +336,23 @@ if ($dtt) {
     if (!$dptfSource) { $dptfSource = "device manager" }
 }
 
-# Valuta risultato
+# Evaluate result
 if ($dptfFound) {
     if ($dptfVersion) {
         $isBad = $BSOD_DRIVERS["dtt"] | Where-Object { $dptfVersion -match $_ }
         if ($isBad) {
-            Write-Log "  [X] DTT/DPTF: $dptfVersion [CAUSA BSOD!] ($dptfSource)" "Red"
+            Write-Log "  [X] DTT/DPTF: $dptfVersion [CAUSES BSOD!] ($dptfSource)" "Red"
             $Issues += "DTT_BAD"
         } elseif ($dptfVersion -match "11404|11401|11400|11399") {
-            Write-Log "  [OK] DTT/DPTF: $dptfVersion [stabile] ($dptfSource)" "Green"
+            Write-Log "  [OK] DTT/DPTF: $dptfVersion [stable] ($dptfSource)" "Green"
         } else {
             Write-Log "  [?] DTT/DPTF: $dptfVersion ($dptfSource)" "Yellow"
         }
     } else {
-        Write-Log "  [OK] DTT/DPTF: Installato ($dptfSource)" "Green"
+        Write-Log "  [OK] DTT/DPTF: Installed ($dptfSource)" "Green"
     }
 } else {
-    Write-Log "  [-] DTT/DPTF: Non installato" "Yellow"
+    Write-Log "  [-] DTT/DPTF: Not installed" "Yellow"
     $Issues += "DTT_MISSING"
 }
 
@@ -366,15 +366,15 @@ if ($ipf) {
     $ver = $ipf.DriverVersion
     $isBad = $BSOD_DRIVERS["ipf"] | Where-Object { $ver -match $_ }
     if ($isBad) {
-        Write-Log "  [X] IPF: $ver [versione problematica]" "Red"
+        Write-Log "  [X] IPF: $ver [problematic version]" "Red"
         $Issues += "IPF_BAD"
     } elseif ($ver -match $IPF_STABLE) {
-        Write-Log "  [OK] IPF: $ver [stabile]" "Green"
+        Write-Log "  [OK] IPF: $ver [stable]" "Green"
     } else {
-        Write-Log "  [?] IPF: $ver [versione sconosciuta]" "Yellow"
+        Write-Log "  [?] IPF: $ver [unknown version]" "Yellow"
     }
 } else {
-    Write-Log "  [-] IPF: Non installato" "Yellow"
+    Write-Log "  [-] IPF: Not installed" "Yellow"
 }
 
 # 3. GNA
@@ -384,21 +384,21 @@ $gna = $drivers | Where-Object {
     $_.InfName -like "*gna*"
 }
 if ($gna) {
-    Write-Log "  [X] GNA: PRESENTE [causa BSOD - da rimuovere]" "Red"
+    Write-Log "  [X] GNA: PRESENT [causes BSOD - must be removed]" "Red"
     $Issues += "GNA"
 } else {
-    Write-Log "  [OK] GNA: Non presente" "Green"
+    Write-Log "  [OK] GNA: Not present" "Green"
 }
 
-# 4. HID Event Filter (necessario per touchpad/tasti Fn)
+# 4. HID Event Filter (needed for touchpad/Fn keys)
 $hid = $drivers | Where-Object {
     $_.DeviceName -like "*HID Event Filter*" -or
     $_.HardWareID -like "*INTC1070*"
 }
 if ($hid) {
-    Write-Log "  [OK] HID Event Filter: $($hid.DriverVersion) [per touchpad/tasti Fn]" "Green"
+    Write-Log "  [OK] HID Event Filter: $($hid.DriverVersion) [for touchpad/Fn keys]" "Green"
 } else {
-    Write-Log "  [-] HID Event Filter: Non presente (potrebbe servire per touchpad)" "Yellow"
+    Write-Log "  [-] HID Event Filter: Not present (may be needed for touchpad)" "Yellow"
 }
 
 # 5. Intel PPM (intelppm)
@@ -407,20 +407,20 @@ $intelppmStart = (Get-ItemProperty $intelppmKey -Name Start -EA 0).Start
 $intelppmStatus = "UNKNOWN"
 
 if ($intelppmStart -eq 4) {
-    Write-Log "  [OK] Intel PPM: DISABILITATO (Start=4) [fix jihakkim attivo]" "Green"
+    Write-Log "  [!] Intel PPM: DISABLED (Start=4) - legacy workaround, usually not needed now" "Yellow"
     $intelppmStatus = "DISABLED"
-} elseif ($intelppmStart -eq 3) {
-    Write-Log "  [OK] Intel PPM: ATTIVO (Start=3) [OK con BIOS aggiornato]" "Green"
+} elseif ($intelppmStart -eq 3 -or $intelppmStart -eq 1) {
+    Write-Log "  [OK] Intel PPM: ACTIVE (Start=$intelppmStart) [expected on updated BIOS]" "Green"
     $intelppmStatus = "ENABLED"
 } else {
-    Write-Log "  [?] Intel PPM: Start=$intelppmStart [stato sconosciuto]" "Yellow"
+    Write-Log "  [?] Intel PPM: Start=$intelppmStart [unknown state]" "Yellow"
     $intelppmStatus = "UNKNOWN"
 }
 
-# 6. Killer SOFTWARE (non il driver WiFi!)
-# NOTA: Intel Killer AX1675i è il chip WiFi standard del PHN16-72
-# Il DRIVER è necessario, il BLOATWARE è il software Killer Control Center
-# Cerca SOLO il software, NON i driver
+# 6. Killer SOFTWARE (not the WiFi driver!)
+# NOTE: Intel Killer AX1675i is the standard WiFi chip of the PHN16-72
+# The DRIVER is needed, the BLOATWARE is the Killer Control Center software
+# Search ONLY for the software, NOT the drivers
 $killerSoftware = Get-Package 2>$null | Where-Object {
     $_.Name -like "*Killer*" -and
     $_.Name -notlike "*Driver*" -and
@@ -436,96 +436,97 @@ $killerServices = Get-Service 2>$null | Where-Object {
 if ($killerSoftware -or $killerServices) {
     $swNames = ($killerSoftware | ForEach-Object { $_.Name }) -join ", "
     if ($swNames) {
-        Write-Log "  [!] Killer SOFTWARE: $swNames [bloatware opzionale]" "Yellow"
+        Write-Log "  [!] Killer SOFTWARE: $swNames [optional bloatware]" "Yellow"
     } else {
-        Write-Log "  [!] Killer SOFTWARE: Servizi in esecuzione [bloatware opzionale]" "Yellow"
+        Write-Log "  [!] Killer SOFTWARE: Services running [optional bloatware]" "Yellow"
     }
     $Issues += "KILLER_SW"
 } else {
-    Write-Log "  [OK] Killer SOFTWARE: Non presente (driver WiFi OK)" "Green"
+    Write-Log "  [OK] Killer SOFTWARE: Not present (WiFi driver OK)" "Green"
 }
 
 Write-Host ""
 if ($Issues.Count -eq 0) {
-    Write-Log "  RISULTATO: Sistema OK - nessun problema rilevato" "Green"
+    Write-Log "  RESULT: System OK - no issues found" "Green"
 } else {
-    Write-Log "  RISULTATO: Trovati $($Issues.Count) problemi: $($Issues -join ', ')" "Red"
+    Write-Log "  RESULT: Found $($Issues.Count) issues: $($Issues -join ', ')" "Red"
 }
 Write-Host ""
 
 # ============================================================================
-# FASE 2: FIX INTELPPM (jihakkim)
+# PHASE 2: INTELPPM FIX (jihakkim)
 # ============================================================================
 
 Write-Host "==================================================================" -ForegroundColor Cyan
-Write-Host " [2/7] FIX INTEL PPM (CLOCK_WATCHDOG_TIMEOUT)" -ForegroundColor Cyan
+Write-Host " [2/7] INTEL PPM" -ForegroundColor Cyan
 Write-Host "==================================================================" -ForegroundColor Cyan
 Write-Host ""
-Write-Host "  intelppm works correctly with latest BIOS." -ForegroundColor Gray
-Write-Host "  Use -DisableIntelppm only if you have an older BIOS." -ForegroundColor Gray
-Write-Host "  Fonte: jihakkim (Acer Community) - testato 2+ settimane" -ForegroundColor Gray
+Write-Host "  Disabling Intel PPM is NOT necessary on updated Acer BIOS." -ForegroundColor Green
+Write-Host "  This script leaves Intel PPM enabled unless you use the legacy" -ForegroundColor Green
+Write-Host "  -DisableIntelppm switch for old BIOS troubleshooting only." -ForegroundColor Gray
+Write-Host "  PredatorGuard is a separate optional tool for locking MSR writes." -ForegroundColor Gray
 Write-Host ""
 
 if (!$DisableIntelppm) {
-    Write-Log "  Saltato (intelppm OK con BIOS aggiornato. Usa -DisableIntelppm per forzare)" "Yellow"
+    Write-Log "  [OK] Intel PPM: no changes needed" "Green"
 } elseif ($intelppmStatus -eq "DISABLED") {
-    Write-Log "  Gia applicato - nessuna azione necessaria" "Green"
+    Write-Log "  Already applied - no action needed" "Green"
 } elseif ($DryRun) {
-    Write-Log "  [DryRun] Imposterebbe: HKLM\...\intelppm\Start = 4" "Yellow"
+    Write-Log "  [DryRun] Would set: HKLM\...\intelppm\Start = 4" "Yellow"
 } else {
-    # Backup valore originale
+    # Backup original value
     $backupFile = "$env:USERPROFILE\Desktop\intelppm_backup.reg"
     reg export "HKLM\SYSTEM\CurrentControlSet\Services\intelppm" $backupFile /y 2>$null
-    Write-Log "  Backup creato: $backupFile" "Gray"
+    Write-Log "  Backup created: $backupFile" "Gray"
 
-    # Applica fix
+    # Apply fix
     try {
         Set-ItemProperty -Path $intelppmKey -Name "Start" -Value 4 -Type DWord -Force
         $verify = (Get-ItemProperty $intelppmKey -Name Start).Start
         if ($verify -eq 4) {
-            Write-Log "  [OK] Intel PPM disabilitato (Start=4)" "Green"
-            Write-Log "  RICHIESTO RIAVVIO per applicare" "Yellow"
+            Write-Log "  [OK] Intel PPM disabled (Start=4)" "Green"
+            Write-Log "  REBOOT REQUIRED to apply" "Yellow"
         } else {
-            Write-Log "  [X] Verifica fallita - Start=$verify" "Red"
+            Write-Log "  [X] Verification failed - Start=$verify" "Red"
         }
     } catch {
-        Write-Log "  [X] Errore: $_" "Red"
+        Write-Log "  [X] Error: $_" "Red"
     }
 }
 Write-Host ""
 
 # ============================================================================
-# FASE 3: RIMOZIONE DRIVER PROBLEMATICI
+# PHASE 3: REMOVAL OF PROBLEMATIC DRIVERS
 # ============================================================================
 
 Write-Host "==================================================================" -ForegroundColor Cyan
-Write-Host " [3/7] RIMOZIONE DRIVER PROBLEMATICI" -ForegroundColor Cyan
+Write-Host " [3/7] REMOVAL OF PROBLEMATIC DRIVERS" -ForegroundColor Cyan
 Write-Host "==================================================================" -ForegroundColor Cyan
 
 $removedCount = 0
 
-# GNA - Disabilita e rimuovi
+# GNA - Disable and remove
 if ($Issues -contains "GNA") {
-    Write-Log "  Rimuovo Intel GNA..." "Yellow"
+    Write-Log "  Removing Intel GNA..." "Yellow"
 
     if (!$DryRun) {
-        # Disabilita dispositivo
+        # Disable device
         $gnaDevices = Get-PnpDevice -FriendlyName "*GNA*","*Gaussian*" 2>$null
         foreach ($dev in $gnaDevices) {
             try {
                 Disable-PnpDevice -InstanceId $dev.InstanceId -Confirm:$false 2>$null
-                Write-Log "    Disabilitato: $($dev.FriendlyName)" "Green"
+                Write-Log "    Disabled: $($dev.FriendlyName)" "Green"
             } catch { }
         }
 
-        # Rimuovi driver
+        # Remove driver
         $oems = pnputil /enum-drivers 2>$null
         $currentOem = ""
         foreach ($line in $oems) {
             if ($line -match "(oem\d+\.inf)") { $currentOem = $matches[1] }
             if ($line -match "gna" -and $currentOem) {
                 pnputil /delete-driver $currentOem /uninstall /force 2>$null
-                Write-Log "    Rimosso: $currentOem" "Green"
+                Write-Log "    Removed: $currentOem" "Green"
                 $removedCount++
                 $currentOem = ""
             }
@@ -533,50 +534,50 @@ if ($Issues -contains "GNA") {
     }
 }
 
-# Killer SOFTWARE (NON i driver WiFi!)
+# Killer SOFTWARE (NOT the WiFi drivers!)
 if ($Issues -contains "KILLER_SW") {
-    Write-Log "  Rimuovo Killer SOFTWARE (il driver WiFi resta)..." "Yellow"
+    Write-Log "  Removing Killer SOFTWARE (WiFi driver stays)..." "Yellow"
 
     if (!$DryRun) {
-        # Ferma servizi Killer
+        # Stop Killer services
         $killerSvcs = Get-Service "*Killer*" 2>$null
         foreach ($svc in $killerSvcs) {
             Stop-Service $svc.Name -Force 2>$null
             Set-Service $svc.Name -StartupType Disabled 2>$null
-            Write-Log "    Servizio disabilitato: $($svc.Name)" "Green"
+            Write-Log "    Service disabled: $($svc.Name)" "Green"
         }
 
-        # Rimuovi software Killer (Control Center, Intelligence Center, ecc)
+        # Remove Killer software (Control Center, Intelligence Center, etc)
         $killerApps = Get-Package "*Killer*" 2>$null | Where-Object { $_.Name -notlike "*Driver*" -and $_.Name -notlike "*WiFi*" }
         foreach ($app in $killerApps) {
             try {
                 $app | Uninstall-Package -Force 2>$null
-                Write-Log "    Rimosso: $($app.Name)" "Green"
+                Write-Log "    Removed: $($app.Name)" "Green"
                 $removedCount++
             } catch { }
         }
 
-        # NON rimuovere i driver WiFi Killer - sono necessari!
-        Write-Log "    NOTA: Driver WiFi Intel Killer mantenuto (necessario)" "Cyan"
+        # DO NOT remove Killer WiFi drivers - they are needed!
+        Write-Log "    NOTE: Intel Killer WiFi driver kept (required)" "Cyan"
     }
 }
 
-# DTT problematico - rimuovi se versione sbagliata
+# Problematic DTT - remove if wrong version
 if ($Issues -contains "DTT_BAD") {
-    Write-Log "  Rimuovo DTT problematico..." "Yellow"
+    Write-Log "  Removing problematic DTT..." "Yellow"
 
     if (!$DryRun) {
-        # Ferma servizio ESIF
+        # Stop ESIF service
         Stop-Service "esifsvc*" -Force 2>$null
 
-        # Rimuovi driver DTT
+        # Remove DTT driver
         $oems = pnputil /enum-drivers 2>$null
         $currentOem = ""
         foreach ($line in $oems) {
             if ($line -match "(oem\d+\.inf)") { $currentOem = $matches[1] }
             if (($line -match "dtt|dptf|Dynamic Tuning") -and $currentOem) {
                 pnputil /delete-driver $currentOem /uninstall /force 2>$null
-                Write-Log "    Rimosso: $currentOem" "Green"
+                Write-Log "    Removed: $currentOem" "Green"
                 $removedCount++
                 $currentOem = ""
             }
@@ -584,32 +585,32 @@ if ($Issues -contains "DTT_BAD") {
     }
 }
 
-Write-Log "  Rimossi $removedCount driver" "Cyan"
+Write-Log "  Removed $removedCount drivers" "Cyan"
 Write-Host ""
 
 # ============================================================================
-# FASE 4: BLOCCO WINDOWS UPDATE PER TUTTI I DRIVER
+# PHASE 4: BLOCK WINDOWS UPDATE FOR ALL DRIVERS
 # ============================================================================
 
 Write-Host "==================================================================" -ForegroundColor Cyan
-Write-Host " [4/7] BLOCCO WINDOWS UPDATE PER DRIVER INSTALLATI" -ForegroundColor Cyan
+Write-Host " [4/7] BLOCK WINDOWS UPDATE FOR INSTALLED DRIVERS" -ForegroundColor Cyan
 Write-Host "==================================================================" -ForegroundColor Cyan
-Write-Host "  Impedisce a Windows di sovrascrivere i driver che installiamo" -ForegroundColor Gray
+Write-Host "  Prevents Windows from overwriting the drivers we install" -ForegroundColor Gray
 Write-Host ""
 
 if (!$DryRun) {
-    # 1. Disabilita driver via Windows Update
+    # 1. Disable drivers via Windows Update
     $wuKey = "HKLM:\SOFTWARE\Policies\Microsoft\Windows\WindowsUpdate"
     if (!(Test-Path $wuKey)) { New-Item -Path $wuKey -Force | Out-Null }
     Set-ItemProperty -Path $wuKey -Name "ExcludeWUDriversInQualityUpdate" -Value 1 -Type DWord
     Write-Log "  [OK] ExcludeWUDriversInQualityUpdate = 1" "Green"
 
-    # 2. Disabilita ricerca driver online
+    # 2. Disable online driver search
     $dsKey = "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\DriverSearching"
     Set-ItemProperty -Path $dsKey -Name "SearchOrderConfig" -Value 0 -Type DWord
     Write-Log "  [OK] SearchOrderConfig = 0" "Green"
 
-    # 3. Blocca Hardware IDs specifici
+    # 3. Block specific Hardware IDs
     $restrictKey = "HKLM:\SOFTWARE\Policies\Microsoft\Windows\DeviceInstall\Restrictions"
     $denyKey = "$restrictKey\DenyDeviceIDs"
 
@@ -625,8 +626,8 @@ if (!$DryRun) {
         $i++
     }
 
-    Write-Log "  Bloccati $($BLOCKED_HWIDS.Count) Hardware IDs:" "Cyan"
-    Write-Log "    - GNA, HID Filter (problematici)" "Gray"
+    Write-Log "  Blocked $($BLOCKED_HWIDS.Count) Hardware IDs:" "Cyan"
+    Write-Log "    - GNA, HID Filter (problematic)" "Gray"
     Write-Log "    - DTT/DPTF" "Gray"
     Write-Log "    - Chipset / Serial IO" "Gray"
     Write-Log "    - ME (Management Engine)" "Gray"
@@ -635,22 +636,22 @@ if (!$DryRun) {
     Write-Log "    - LAN Ethernet" "Gray"
     Write-Log "    - WLAN WiFi" "Gray"
     Write-Log "    - Bluetooth" "Gray"
-    Write-Log "  Windows Update non potra' sovrascrivere questi driver" "Green"
+    Write-Log "  Windows Update will not be able to overwrite these drivers" "Green"
 }
 Write-Host ""
 
 # ============================================================================
-# FASE 5: GUIDA DOWNLOAD
+# PHASE 5: DOWNLOAD GUIDE
 # ============================================================================
 
 Write-Host "==================================================================" -ForegroundColor Cyan
-Write-Host " [5/7] DOWNLOAD DRIVER STABILI" -ForegroundColor Cyan
+Write-Host " [5/7] DOWNLOAD STABLE DRIVERS" -ForegroundColor Cyan
 Write-Host "==================================================================" -ForegroundColor Cyan
 
 if ($SkipDownload) {
-    Write-Log "  Saltato (-SkipDownload)" "Yellow"
+    Write-Log "  Skipped (-SkipDownload)" "Yellow"
 } else {
-    # Genera guida HTML
+    # Generate HTML guide
     $html = @"
 <!DOCTYPE html>
 <html><head><meta charset="UTF-8"><title>PHN16-72 Driver Guide v7.6</title>
@@ -675,101 +676,101 @@ th{background:#333}
 <h1>PHN16-72 Driver Guide v7.6</h1>
 
 <div class="critical">
-<h2>DRIVER CHE CAUSANO BSOD</h2>
+<h2>DRIVERS THAT CAUSE BSOD</h2>
 <table>
-<tr><th>Driver</th><th>File</th><th>Errore BSOD</th><th>Azione</th></tr>
-<tr><td class="bad">Intel DPTF/DTT 11405+</td><td>dtt_sw.inf</td><td>Crash termici</td><td>Rimuovere</td></tr>
-<tr><td class="bad">Intel DPTF (APO)</td><td>-</td><td>Richiede DTT 11405+</td><td>NON installare!</td></tr>
-<tr><td class="bad">Intel GNA</td><td>gna.inf</td><td>Vari BSOD</td><td>Bloccare</td></tr>
-<tr><td class="bad">Intel PPM</td><td>intelppm.sys</td><td>CLOCK_WATCHDOG_TIMEOUT</td><td>Disabilitare</td></tr>
+<tr><th>Driver</th><th>File</th><th>BSOD Error</th><th>Action</th></tr>
+<tr><td class="bad">Intel DPTF/DTT 11405+</td><td>dtt_sw.inf</td><td>Thermal crashes</td><td>Replace with Acer DPTF 11401</td></tr>
+<tr><td class="bad">Intel DPTF (APO)</td><td>-</td><td>Requires DTT 11405+</td><td>DO NOT install!</td></tr>
+<tr><td class="bad">Intel GNA</td><td>gna.inf</td><td>Various BSOD</td><td>Block</td></tr>
+<tr><td class="good">Intel PPM</td><td>intelppm.sys</td><td>Legacy CLOCK_WATCHDOG workaround</td><td>Keep enabled on updated BIOS</td></tr>
 </table>
 </div>
 
 <div class="success">
-<h2>VERSIONI STABILI (pre-BSOD)</h2>
+<h2>STABLE VERSIONS (pre-BSOD)</h2>
 <ul>
-<li><b>DPTF (SENZA APO):</b> v1.0.11401 o precedenti - dal sito Acer</li>
-<li><b>DTT:</b> 9.0.11404.39881 o precedenti</li>
-<li><b>IPF:</b> 1.0.11404.41023 o precedenti</li>
+<li><b>DPTF (WITHOUT APO):</b> v1.0.11401 or earlier - from the Acer site</li>
+<li><b>DTT:</b> 9.0.11404.39881 or earlier</li>
+<li><b>IPF:</b> 1.0.11404.41023 or earlier</li>
 </ul>
-<p style="color:#ff8800"><b>ATTENZIONE:</b> NON installare "DPTF (APO)" - richiede DTT 11405+ che causa BSOD!</p>
+<p style="color:#ff8800"><b>WARNING:</b> DO NOT install "DPTF (APO)" - it requires DTT 11405+ which causes BSOD!</p>
 </div>
 
 <div class="box">
-<h2><span class="step">1</span> Driver da Acer (CONSIGLIATI)</h2>
-<p><a href="$Acer_URL" target="_blank">Apri pagina supporto Acer PHN16-72</a></p>
-<p><b>SCARICA QUESTI (in ordine di priorita'):</b></p>
+<h2><span class="step">1</span> Drivers from Acer (RECOMMENDED)</h2>
+<p><a href="$Acer_URL" target="_blank">Open Acer PHN16-72 support page</a></p>
+<p><b>DOWNLOAD THESE (in order of priority):</b></p>
 <ol>
-<li><b>Chipset Intel</b> - Serial IO, I2C, base per touchpad</li>
+<li><b>Intel Chipset</b> - Serial IO, I2C, base for touchpad</li>
 <li><b>ME</b> - Intel Management Engine</li>
-<li><b>DPTF (SENZA APO)</b> - cerca versione 1.0.11401, NON quella con "(APO)"!</li>
-<li><b>VGA Intel UMA</b> - Grafica integrata (IMPORTANTE: scegli UMA, non non-UMA!)</li>
-<li><b>Audio Realtek</b></li>
-<li><b>LAN E3100G</b> - <span style="color:#ff8800">SENZA Killer Control Centre!</span></li>
-<li><b>Wireless LAN</b> - <span style="color:#ff8800">SENZA 1675i!</span></li>
-<li><b>Bluetooth</b> - Se non funziona</li>
-<li><b>HID Event Filter</b> - Per touchpad e tasti Fn</li>
+<li><b>DPTF (WITHOUT APO)</b> - look for version 1.0.11401, NOT the one with "(APO)"!</li>
+<li><b>VGA Intel UMA</b> - Integrated graphics (IMPORTANT: choose UMA, not non-UMA!)</li>
+<li><b>Realtek Audio</b></li>
+<li><b>LAN E3100G</b> - <span style="color:#ff8800">WITHOUT Killer Control Centre!</span></li>
+<li><b>Wireless LAN</b> - <span style="color:#ff8800">WITHOUT 1675i!</span></li>
+<li><b>Bluetooth</b> - If not working</li>
+<li><b>HID Event Filter</b> - For touchpad and Fn keys</li>
 </ol>
-<p style="margin-top:10px;color:#ff4444"><b>ATTENZIONE:</b> Per LAN e WLAN scegli le versioni SENZA software aggiuntivo!</p>
+<p style="margin-top:10px;color:#ff4444"><b>WARNING:</b> For LAN and WLAN choose the versions WITHOUT additional software!</p>
 </div>
 
 <div class="warning">
-<h2>NON SCARICARE MAI</h2>
+<h2>NEVER DOWNLOAD</h2>
 <ul>
-<li><b>GNA</b> - Intel Gaussian Neural Accelerator (causa BSOD)</li>
-<li><b>DTT/DPTF versioni 11405+</b> - Causano BSOD</li>
+<li><b>GNA</b> - Intel Gaussian Neural Accelerator (causes BSOD)</li>
+<li><b>DTT/DPTF versions 11405+</b> - Cause BSOD</li>
 </ul>
-<p style="margin-top:15px"><b>NOTA WiFi:</b> Il driver Intel Killer AX1675i e' NECESSARIO (e' il chip WiFi del laptop).
-Il bloatware da evitare e' il SOFTWARE Killer Control Center, non il driver.</p>
+<p style="margin-top:15px"><b>WiFi NOTE:</b> The Intel Killer AX1675i driver is REQUIRED (it's the laptop's WiFi chip).
+The bloatware to avoid is the Killer Control Center SOFTWARE, not the driver.</p>
 </div>
 
 <div class="box">
-<h2><span class="step">2</span> Ordine di Installazione (IMPORTANTE!)</h2>
-<p>Lo script installa automaticamente nell'ordine corretto e ti guida per VGA Intel e NVIDIA:</p>
+<h2><span class="step">2</span> Installation Order (IMPORTANT!)</h2>
+<p>The script installs automatically in the correct order and guides you for Intel VGA and NVIDIA:</p>
 <ol>
-<li><b>Chipset Intel</b> - PRIMO! Base per tutti gli altri driver</li>
+<li><b>Intel Chipset</b> - FIRST! Base for all other drivers</li>
 <li><b>ME</b> - Intel Management Engine</li>
-<li><b>DPTF</b> - Thermal Framework (versione SENZA APO!)</li>
-<li><b style="color:#00d4ff">VGA Intel UMA</b> - Lo script ti guidera' per installazione manuale via Device Manager</li>
-<li><b style="color:#76b900">NVIDIA</b> - Installare manualmente (GeForce Experience o nvidia.com)</li>
-<li><b>Audio Realtek</b></li>
+<li><b>DPTF</b> - Thermal Framework (version WITHOUT APO!)</li>
+<li><b style="color:#00d4ff">Intel VGA UMA</b> - The script will guide you for manual installation via Device Manager</li>
+<li><b style="color:#76b900">NVIDIA</b> - Install manually (GeForce Experience or nvidia.com)</li>
+<li><b>Realtek Audio</b></li>
 <li><b>LAN</b> - Ethernet</li>
 <li><b>Wireless LAN</b> - WiFi</li>
 <li><b>Bluetooth</b></li>
 </ol>
-<p style="color:#ff8800"><b>RIAVVIA dopo ogni driver critico (Chipset, ME, DPTF, GPU)</b></p>
-<p style="color:#00ff88"><b>Windows Update e' bloccato per tutti questi driver!</b></p>
+<p style="color:#ff8800"><b>REBOOT after each critical driver (Chipset, ME, DPTF, GPU)</b></p>
+<p style="color:#00ff88"><b>Windows Update is blocked for all these drivers!</b></p>
 </div>
 
 <div class="warning">
-<h3>VGA INTEL - INSTALLAZIONE MANUALE</h3>
-<p>L'installer automatico Intel VGA ha un bug (Parade MUX) su questi laptop.</p>
-<p>Lo script ti guidera' per installare manualmente via Device Manager:</p>
+<h3>INTEL VGA - MANUAL INSTALLATION</h3>
+<p>The automatic Intel VGA installer has a bug (Parade MUX) on these laptops.</p>
+<p>The script will guide you to install manually via Device Manager:</p>
 <ol>
-<li>Estrai il file ZIP del driver VGA Intel</li>
-<li>Apri Device Manager (Win+X -> Device Manager)</li>
-<li>Espandi "Display adapters"</li>
-<li>Click destro su "Intel UHD Graphics" -> "Update driver"</li>
+<li>Extract the Intel VGA driver ZIP file</li>
+<li>Open Device Manager (Win+X -> Device Manager)</li>
+<li>Expand "Display adapters"</li>
+<li>Right-click on "Intel UHD Graphics" -> "Update driver"</li>
 <li>"Browse my computer for drivers"</li>
-<li>Seleziona la cartella estratta -> Next</li>
+<li>Select the extracted folder -> Next</li>
 </ol>
-<p style="color:#ff4444"><b>Se lo schermo diventa nero:</b> Riavvia in Safe Mode e ripeti</p>
+<p style="color:#ff4444"><b>If the screen goes black:</b> Reboot in Safe Mode and retry</p>
 </div>
 
 <div class="box">
-<h2><span class="step">3</span> Verifica finale</h2>
-<p>Dopo il riavvio, esegui:</p>
+<h2><span class="step">3</span> Final Verification</h2>
+<p>After rebooting, run:</p>
 <pre><code>.\HeliosPHN16-72_Check.ps1</code></pre>
-<p>Controlla che:</p>
+<p>Check that:</p>
 <ul>
-<li>DTT sia versione 11404 o 11401</li>
-<li>GNA sia assente/bloccato</li>
-<li>intelppm sia disabilitato (Start=4)</li>
+<li>DTT is version 11404 or 11401</li>
+<li>GNA is absent/blocked</li>
+<li>Intel PPM is active (expected on updated BIOS)</li>
 </ul>
 </div>
 
 <div class="box">
-<h2>Fonti (Community Acer)</h2>
+<h2>Sources (Acer Community)</h2>
 <ul>
 <li><a href="https://community.acer.com/en/discussion/723737">artkirius - SOLVED CLOCK_WATCHDOG</a></li>
 <li><a href="https://community.acer.com/en/discussion/728746">jihakkim - Fix intelppm</a></li>
@@ -778,81 +779,81 @@ Il bloatware da evitare e' il SOFTWARE Killer Control Center, non il driver.</p>
 </div>
 
 <p style="margin-top:40px;color:#888;text-align:center">
-Generato: $(Get-Date -Format "dd/MM/yyyy HH:mm") | PHN16-72 Setup v7.6
+Generated: $(Get-Date -Format "dd/MM/yyyy HH:mm") | PHN16-72 Setup v7.6
 </p>
 </body></html>
 "@
     $html | Out-File "$DownloadPath\GUIDA_DRIVER.html" -Encoding UTF8
 
-    # Apri browser
+    # Open browser
     Start-Process $Acer_URL
     Start-Process "$DownloadPath\GUIDA_DRIVER.html"
 
     Write-Host ""
     Write-Host "  ============================================================" -ForegroundColor Yellow
-    Write-Host "  SCARICA QUESTI DRIVER DAL SITO ACER:" -ForegroundColor Yellow
-    Write-Host "  (Lo script li installera' nell'ordine corretto)" -ForegroundColor Gray
+    Write-Host "  DOWNLOAD THESE DRIVERS FROM THE ACER SITE:" -ForegroundColor Yellow
+    Write-Host "  (The script will install them in the correct order)" -ForegroundColor Gray
     Write-Host "  ------------------------------------------------------------" -ForegroundColor Yellow
-    Write-Host "  1. [OK] Chipset Intel (Serial IO, I2C)" -ForegroundColor Green
+    Write-Host "  1. [OK] Intel Chipset (Serial IO, I2C)" -ForegroundColor Green
     Write-Host "  2. [OK] ME - Intel Management Engine" -ForegroundColor Green
-    Write-Host "  3. [OK] DPTF (SENZA APO!) - versione 11401" -ForegroundColor Green
-    Write-Host "  4. [>>] VGA Intel UMA - LO SCRIPT TI GUIDERA'" -ForegroundColor Cyan
-    Write-Host "  5. [>>] NVIDIA - LO SCRIPT TI CHIEDERA' DI INSTALLARLO" -ForegroundColor Cyan
-    Write-Host "  6. [OK] Audio Realtek" -ForegroundColor Green
-    Write-Host "  7. [OK] LAN E3100G (SENZA Killer Control Centre!)" -ForegroundColor Green
-    Write-Host "  8. [OK] Wireless LAN (SENZA 1675i!)" -ForegroundColor Green
-    Write-Host "  9. [OK] Bluetooth (se necessario)" -ForegroundColor Green
-    Write-Host " 10. [OK] HID Event Filter (per touchpad/tasti Fn)" -ForegroundColor Green
+    Write-Host "  3. [OK] DPTF (WITHOUT APO!) - version 11401" -ForegroundColor Green
+    Write-Host "  4. [>>] Intel VGA UMA - THE SCRIPT WILL GUIDE YOU" -ForegroundColor Cyan
+    Write-Host "  5. [>>] NVIDIA - THE SCRIPT WILL ASK YOU TO INSTALL IT" -ForegroundColor Cyan
+    Write-Host "  6. [OK] Realtek Audio" -ForegroundColor Green
+    Write-Host "  7. [OK] LAN E3100G (WITHOUT Killer Control Centre!)" -ForegroundColor Green
+    Write-Host "  8. [OK] Wireless LAN (WITHOUT 1675i!)" -ForegroundColor Green
+    Write-Host "  9. [OK] Bluetooth (if needed)" -ForegroundColor Green
+    Write-Host " 10. [OK] HID Event Filter (for touchpad/Fn keys)" -ForegroundColor Green
     Write-Host "  ------------------------------------------------------------" -ForegroundColor Yellow
-    Write-Host "  [X] NON scaricare: GNA" -ForegroundColor Red
+    Write-Host "  [X] DO NOT download: GNA" -ForegroundColor Red
     Write-Host "  ------------------------------------------------------------" -ForegroundColor Yellow
     Write-Host ""
-    Write-Host "  SALVA I FILE ZIP (senza estrarre!) IN:" -ForegroundColor White
+    Write-Host "  SAVE THE ZIP FILES (without extracting!) TO:" -ForegroundColor White
     Write-Host "  $DownloadPath" -ForegroundColor Cyan
     Write-Host ""
     Write-Host "  ============================================================" -ForegroundColor Yellow
     Write-Host ""
 
-    # Crea cartella se non esiste
+    # Create folder if it doesn't exist
     if (!(Test-Path $DownloadPath)) {
         New-Item -ItemType Directory -Path $DownloadPath -Force | Out-Null
-        Write-Host "  Cartella creata: $DownloadPath" -ForegroundColor Green
+        Write-Host "  Folder created: $DownloadPath" -ForegroundColor Green
     }
 
-    Read-Host "  Premi INVIO quando hai scaricato tutti i driver"
+    Read-Host "  Press ENTER when you have downloaded all drivers"
 }
 Write-Host ""
 
 # ============================================================================
-# FASE 6: INSTALLAZIONE DRIVER (ORDINE CORRETTO + PULIZIA)
+# PHASE 6: DRIVER INSTALLATION (CORRECT ORDER + CLEANUP)
 # ============================================================================
-# Ordine consigliato dalla community Acer (Puraw):
+# Recommended order from Acer community (Puraw):
 # 1. Chipset  2. ME  3. DPTF  4. GPU (Intel + NVIDIA)  5. Audio  6. WiFi  7. Bluetooth
 
 Write-Host "==================================================================" -ForegroundColor Cyan
-Write-Host " [6/7] INSTALLAZIONE DRIVER" -ForegroundColor Cyan
+Write-Host " [6/7] DRIVER INSTALLATION" -ForegroundColor Cyan
 Write-Host "==================================================================" -ForegroundColor Cyan
 Write-Host ""
-Write-Host "  Ordine installazione: Chipset > ME > DPTF > GPU > Audio > WiFi > BT" -ForegroundColor Gray
+Write-Host "  Installation order: Chipset > ME > DPTF > GPU > Audio > WiFi > BT" -ForegroundColor Gray
 Write-Host ""
 
-# Mappa priorità installazione (numero più basso = prima)
-# NOTA: VGA Intel e NVIDIA sono MANUALI, non in questa lista
+# Installation priority map (lower number = first)
+# NOTE: Intel VGA and NVIDIA are MANUAL, not in this list
 $InstallOrder = @{
     "chipset"   = 1
     "chip"      = 1
     "serialio"  = 1
     "serial"    = 1
-    "io.driver" = 1      # Nome file Acer: "IO Drivers_Intel" (. = qualsiasi char)
+    "io.driver" = 1      # Acer file name: "IO Drivers_Intel" (. = any char)
     "me"        = 2
     "management"= 2
-    "mgmtengine"= 2      # Nome file Acer: "MgmtEngine_Intel"
+    "mgmtengine"= 2      # Acer file name: "MgmtEngine_Intel"
     "mgmt.*engine" = 2
     "dptf"      = 3
     "dtt"       = 3
     "thermal"   = 3
-    # VGA Intel = MANUALE (Parade MUX bug)
-    # NVIDIA = MANUALE
+    # Intel VGA = MANUAL (Parade MUX bug)
+    # NVIDIA = MANUAL
     "audio"     = 4
     "realtek"   = 4
     "sound"     = 4
@@ -864,60 +865,60 @@ $InstallOrder = @{
     "wireless"  = 6
     "killer"    = 6
     "bluetooth" = 7
-    "bt_"       = 7      # bt_ per evitare match accidentali
-    "hid"       = 8      # HID Event Filter per touchpad/tasti Fn
+    "bt_"       = 7      # bt_ to avoid accidental matches
+    "hid"       = 8      # HID Event Filter for touchpad/Fn keys
     "intc1070"  = 8
 }
 
-# Driver da rimuovere prima dell'installazione (pulizia)
+# Drivers to remove before installation (cleanup)
 $DriversToClean = @{
     "dptf|dtt|thermal|esif" = "DTT/DPTF"
     "gna|gaussian"          = "GNA"
 }
 
 if ($SkipInstall) {
-    Write-Log "  Saltato (-SkipInstall)" "Yellow"
+    Write-Log "  Skipped (-SkipInstall)" "Yellow"
 } else {
     $zips = Get-ChildItem "$DownloadPath\*.zip" 2>$null
 
     if (!$zips -or $zips.Count -eq 0) {
-        Write-Log "  Nessun ZIP trovato in $DownloadPath" "Yellow"
-        Write-Log "  Scarica i driver dal sito Acer e salvali in:" "Yellow"
+        Write-Log "  No ZIP files found in $DownloadPath" "Yellow"
+        Write-Log "  Download drivers from the Acer site and save them to:" "Yellow"
         Write-Log "  $DownloadPath" "White"
     } else {
-        Write-Log "  Trovati $($zips.Count) pacchetti" "Cyan"
+        Write-Log "  Found $($zips.Count) packages" "Cyan"
 
-        # Filtra e blocca driver che non devono essere installati automaticamente
+        # Filter and block drivers that should not be installed automatically
         $validZips = @()
         $vgaIntelZip = $null
 
         foreach ($z in $zips) {
             $name = $z.Name.ToLower()
             if ($name -match "gna|gaussian") {
-                Write-Log "  [X] BLOCCATO: $($z.Name) [GNA - causa BSOD]" "Red"
+                Write-Log "  [X] BLOCKED: $($z.Name) [GNA - causes BSOD]" "Red"
                 continue
             }
             if ($name -match "nvidia|geforce|rtx|gtx") {
-                Write-Log "  [i] SKIP: $($z.Name) [NVIDIA - installare manualmente]" "Cyan"
+                Write-Log "  [i] SKIP: $($z.Name) [NVIDIA - install manually]" "Cyan"
                 continue
             }
-            # VGA Intel ha problemi con installer silenzioso (Parade MUX bug)
-            # Acer consiglia installazione manuale via Device Manager
+            # Intel VGA has issues with silent installer (Parade MUX bug)
+            # Acer recommends manual installation via Device Manager
             if ($name -match "vga.*intel|intel.*vga") {
-                Write-Log "  [i] SKIP: $($z.Name) [VGA Intel - installare manualmente]" "Cyan"
+                Write-Log "  [i] SKIP: $($z.Name) [Intel VGA - install manually]" "Cyan"
                 $vgaIntelZip = $z
                 continue
             }
-            # HID Event Filter - necessario per touchpad, ma può causare freeze
-            # Lo installiamo ma con warning
+            # HID Event Filter - needed for touchpad, but can cause freeze
+            # We install it but with a warning
             if ($name -match "hid.*event|hid.*filter") {
-                Write-Log "  [!] WARNING: $($z.Name) [HID Event Filter - necessario per touchpad]" "Yellow"
-                # Non bloccare, lascialo installare
+                Write-Log "  [!] WARNING: $($z.Name) [HID Event Filter - needed for touchpad]" "Yellow"
+                # Don't block, let it install
             }
             $validZips += $z
         }
 
-        # Ordina per priorità
+        # Sort by priority
         $sortedZips = $validZips | Sort-Object {
             $name = $_.Name.ToLower()
             $priority = 99
@@ -930,7 +931,7 @@ if ($SkipInstall) {
         }
 
         Write-Host ""
-        Write-Log "  Ordine installazione:" "Cyan"
+        Write-Log "  Installation order:" "Cyan"
         $i = 1
         foreach ($z in $sortedZips) {
             Write-Log "    $i. $($z.Name)" "White"
@@ -938,18 +939,18 @@ if ($SkipInstall) {
         }
         Write-Host ""
 
-        # FASE 6a: PULIZIA COMPLETA DRIVER ESISTENTI
-        Write-Log "  --- Pulizia driver esistenti ---" "Yellow"
-        Write-Log "  (Necessario per forzare Windows a usare i nuovi driver)" "Gray"
+        # PHASE 6a: FULL CLEANUP OF EXISTING DRIVERS
+        Write-Log "  --- Cleaning up existing drivers ---" "Yellow"
+        Write-Log "  (Required to force Windows to use the new drivers)" "Gray"
 
         if (!$DryRun) {
-            # Pattern per identificare i driver da pulire in base ai pacchetti scaricati
+            # Patterns to identify drivers to clean based on downloaded packages
             $cleanPatterns = @()
 
             foreach ($z in $sortedZips) {
                 $name = $z.Name.ToLower()
 
-                # Aggiungi pattern di pulizia in base al tipo di pacchetto
+                # Add cleanup patterns based on package type
                 if ($name -match "chipset|serial|io.driver") {
                     $cleanPatterns += "ialpss|serialio|i2c|gpio|spi|uart"
                 }
@@ -976,16 +977,16 @@ if ($SkipInstall) {
                 }
             }
 
-            # Sempre pulire GNA (problematico)
+            # Always clean GNA (problematic)
             $cleanPatterns += "gna|gaussian"
 
-            # Rimuovi duplicati
+            # Remove duplicates
             $cleanPatterns = $cleanPatterns | Select-Object -Unique
             $cleanRegex = ($cleanPatterns -join "|")
 
-            Write-Log "  Cerco driver da rimuovere..." "Gray"
+            Write-Log "  Searching for drivers to remove..." "Gray"
 
-            # Enumera tutti i driver
+            # Enumerate all drivers
             $existingDrivers = pnputil /enum-drivers 2>$null
             $currentOem = ""
             $currentOriginal = ""
@@ -1006,7 +1007,7 @@ if ($SkipInstall) {
                     $currentOriginal = $matches[1].Trim()
                 }
 
-                # Se abbiamo entrambi, verifica se corrisponde ai pattern
+                # If we have both, check if it matches the patterns
                 if ($currentOem -and $currentOriginal) {
                     if ($currentOriginal -match $cleanRegex) {
                         $driversToRemove += @{
@@ -1020,130 +1021,130 @@ if ($SkipInstall) {
             }
 
             if ($driversToRemove.Count -gt 0) {
-                Write-Log "  Trovati $($driversToRemove.Count) driver da rimuovere:" "Yellow"
+                Write-Log "  Found $($driversToRemove.Count) drivers to remove:" "Yellow"
 
                 foreach ($drv in $driversToRemove) {
-                    Write-Log "    Rimuovo: $($drv.Oem) ($($drv.Original))" "Gray"
+                    Write-Log "    Removing: $($drv.Oem) ($($drv.Original))" "Gray"
                     $result = pnputil /delete-driver $drv.Oem /uninstall 2>&1 | Out-String
                     if ($result -match "eliminato|deleted|Driver package deleted") {
                         $cleanedCount++
                     } elseif ($result -match "in uso|in use") {
-                        Write-Log "      [!] In uso - verra' sostituito al riavvio" "Yellow"
+                        Write-Log "      [!] In use - will be replaced after reboot" "Yellow"
                     }
                 }
 
-                Write-Log "  Rimossi $cleanedCount driver" "Green"
+                Write-Log "  Removed $cleanedCount drivers" "Green"
 
                 if ($cleanedCount -lt $driversToRemove.Count) {
-                    Write-Log "  [!] Alcuni driver sono in uso - riavviare dopo l'installazione" "Yellow"
+                    Write-Log "  [!] Some drivers are in use - reboot after installation" "Yellow"
                 }
             } else {
-                Write-Log "  Nessun driver esistente da pulire" "Gray"
+                Write-Log "  No existing drivers to clean up" "Gray"
             }
         }
 
         Write-Host ""
-        Write-Log "  --- Installazione nuovi driver ---" "Yellow"
+        Write-Log "  --- Installing new drivers ---" "Yellow"
 
-        # Flag per prompt GPU
+        # Flag for GPU prompt
         $gpuPromptShown = $false
         $dptfInstalled = $false
 
-        # FASE 6b: INSTALLAZIONE ORDINATA
+        # PHASE 6b: ORDERED INSTALLATION
         foreach ($z in $sortedZips) {
             $name = $z.Name.ToLower()
 
-            # Dopo DPTF, chiedi di installare VGA Intel + NVIDIA manualmente
+            # After DPTF, ask to install Intel VGA + NVIDIA manually
             if ($dptfInstalled -and !$gpuPromptShown) {
                 $isDptf = $name -match "dptf|dtt|thermal"
                 if (!$isDptf) {
                     $gpuPromptShown = $true
 
-                    # === PROMPT VGA INTEL ===
+                    # === INTEL VGA PROMPT ===
                     if ($vgaIntelZip) {
                         Write-Host ""
                         Write-Host "  ============================================================" -ForegroundColor Cyan
-                        Write-Host "  >>> INSTALLA ORA IL DRIVER VGA INTEL <<<" -ForegroundColor Cyan
+                        Write-Host "  >>> INSTALL THE INTEL VGA DRIVER NOW <<<" -ForegroundColor Cyan
                         Write-Host "  ============================================================" -ForegroundColor Cyan
                         Write-Host ""
-                        Write-Host "  Il driver VGA Intel richiede installazione manuale" -ForegroundColor White
-                        Write-Host "  (l'installer automatico ha un bug con Parade MUX)" -ForegroundColor Gray
+                        Write-Host "  The Intel VGA driver requires manual installation" -ForegroundColor White
+                        Write-Host "  (the automatic installer has a Parade MUX bug)" -ForegroundColor Gray
                         Write-Host ""
-                        Write-Host "  PROCEDURA:" -ForegroundColor Yellow
-                        Write-Host "  1. Apri: $($vgaIntelZip.FullName)" -ForegroundColor White
-                        Write-Host "  2. Estrai il contenuto in una cartella" -ForegroundColor White
-                        Write-Host "  3. Apri Device Manager (Win+X -> Device Manager)" -ForegroundColor White
-                        Write-Host "  4. Espandi 'Display adapters'" -ForegroundColor White
-                        Write-Host "  5. Click destro su 'Intel UHD Graphics' -> 'Update driver'" -ForegroundColor White
+                        Write-Host "  PROCEDURE:" -ForegroundColor Yellow
+                        Write-Host "  1. Open: $($vgaIntelZip.FullName)" -ForegroundColor White
+                        Write-Host "  2. Extract the contents to a folder" -ForegroundColor White
+                        Write-Host "  3. Open Device Manager (Win+X -> Device Manager)" -ForegroundColor White
+                        Write-Host "  4. Expand 'Display adapters'" -ForegroundColor White
+                        Write-Host "  5. Right-click on 'Intel UHD Graphics' -> 'Update driver'" -ForegroundColor White
                         Write-Host "  6. 'Browse my computer for drivers'" -ForegroundColor White
-                        Write-Host "  7. Seleziona la cartella estratta -> Next" -ForegroundColor White
+                        Write-Host "  7. Select the extracted folder -> Next" -ForegroundColor White
                         Write-Host ""
-                        Write-Host "  NOTA: Se lo schermo diventa nero, riavvia in Safe Mode" -ForegroundColor Red
+                        Write-Host "  NOTE: If the screen goes black, reboot in Safe Mode" -ForegroundColor Red
                         Write-Host "  ============================================================" -ForegroundColor Cyan
                         Write-Host ""
 
                         if (!$DryRun) {
-                            $response = Read-Host "  Premi INVIO dopo aver installato VGA Intel (o 'S' per saltare)"
+                            $response = Read-Host "  Press ENTER after installing Intel VGA (or 'S' to skip)"
                             if ($response -ne 'S' -and $response -ne 's') {
-                                Write-Log "  VGA Intel installato dall'utente" "Green"
+                                Write-Log "  Intel VGA installed by user" "Green"
                             } else {
-                                Write-Log "  VGA Intel saltato - installare dopo il riavvio" "Yellow"
+                                Write-Log "  Intel VGA skipped - install after reboot" "Yellow"
                             }
                         }
                     }
 
-                    # === PROMPT NVIDIA ===
+                    # === NVIDIA PROMPT ===
                     Write-Host ""
                     Write-Host "  ============================================================" -ForegroundColor Green
-                    Write-Host "  >>> INSTALLA ORA I DRIVER NVIDIA <<<" -ForegroundColor Green
+                    Write-Host "  >>> INSTALL NVIDIA DRIVERS NOW <<<" -ForegroundColor Green
                     Write-Host "  ============================================================" -ForegroundColor Green
                     Write-Host ""
-                    Write-Host "  OPZIONE 1: GeForce Experience (consigliato)" -ForegroundColor Cyan
-                    Write-Host "    - Scarica da: https://www.nvidia.com/geforce-experience/" -ForegroundColor Gray
+                    Write-Host "  OPTION 1: GeForce Experience (recommended)" -ForegroundColor Cyan
+                    Write-Host "    - Download from: https://www.nvidia.com/geforce-experience/" -ForegroundColor Gray
                     Write-Host ""
-                    Write-Host "  OPZIONE 2: Driver manuali" -ForegroundColor Cyan
-                    Write-Host "    - Scarica da: https://www.nvidia.com/drivers/" -ForegroundColor Gray
-                    Write-Host "    - Seleziona RTX 4060/4070/4080 Laptop GPU" -ForegroundColor Gray
+                    Write-Host "  OPTION 2: Manual drivers" -ForegroundColor Cyan
+                    Write-Host "    - Download from: https://www.nvidia.com/drivers/" -ForegroundColor Gray
+                    Write-Host "    - Select RTX 4060/4070/4080 Laptop GPU" -ForegroundColor Gray
                     Write-Host ""
                     Write-Host "  ============================================================" -ForegroundColor Green
                     Write-Host ""
 
                     if (!$DryRun) {
-                        $response = Read-Host "  Premi INVIO dopo aver installato NVIDIA (o 'S' per saltare)"
+                        $response = Read-Host "  Press ENTER after installing NVIDIA (or 'S' to skip)"
                         if ($response -ne 'S' -and $response -ne 's') {
-                            Write-Log "  NVIDIA installato dall'utente" "Green"
+                            Write-Log "  NVIDIA installed by user" "Green"
                         } else {
-                            Write-Log "  NVIDIA saltato - installare dopo il riavvio" "Yellow"
+                            Write-Log "  NVIDIA skipped - install after reboot" "Yellow"
                         }
                     }
                     Write-Host ""
                 }
             }
 
-            Write-Log "  Elaboro: $($z.Name)" "White"
+            Write-Log "  Processing: $($z.Name)" "White"
             $dest = "$TempPath\$($z.BaseName)"
 
             if (!$DryRun) {
-                # Estrai
+                # Extract
                 if (Test-Path $dest) { Remove-Item $dest -Recurse -Force 2>$null }
                 New-Item -ItemType Directory -Path $dest -Force | Out-Null
 
                 try {
                     Expand-Archive -Path $z.FullName -DestinationPath $dest -Force
                 } catch {
-                    Write-Log "    [X] Errore estrazione" "Red"
+                    Write-Log "    [X] Extraction error" "Red"
                     continue
                 }
 
-                # Cerca Install.cmd (pacchetti Acer standard)
+                # Look for Install.cmd (standard Acer packages)
                 $installCmd = Get-ChildItem "$dest" -Filter "Install.cmd" -Recurse 2>$null | Select-Object -First 1
 
-                # Cerca setup.exe
+                # Look for setup.exe
                 $setup = Get-ChildItem "$dest" -Filter "*.exe" -Recurse 2>$null |
                          Where-Object { $_.Name -match "^(setup|install|Setup|Install)" } |
                          Select-Object -First 1
 
-                # Cerca AsusSetup o simili (a volte usato da Acer)
+                # Look for AsusSetup or similar (sometimes used by Acer)
                 if (!$setup) {
                     $setup = Get-ChildItem "$dest" -Filter "*Setup*.exe" -Recurse 2>$null |
                              Select-Object -First 1
@@ -1151,40 +1152,40 @@ if ($SkipInstall) {
 
                 $installed = $false
 
-                # Metodo 1: Install.cmd (preferito per pacchetti Acer)
+                # Method 1: Install.cmd (preferred for Acer packages)
                 if ($installCmd -and !$installed) {
-                    Write-Log "    Eseguo: Install.cmd" "Cyan"
+                    Write-Log "    Running: Install.cmd" "Cyan"
                     $workDir = $installCmd.DirectoryName
                     $proc = Start-Process "cmd.exe" -ArgumentList "/c `"$($installCmd.FullName)`"" -WorkingDirectory $workDir -Wait -PassThru -WindowStyle Hidden 2>$null
                     if ($proc.ExitCode -eq 0 -or $proc.ExitCode -eq 3010) {
-                        Write-Log "    [OK] Installato" "Green"
+                        Write-Log "    [OK] Installed" "Green"
                         $installed = $true
                     } else {
-                        Write-Log "    [!] Exit code: $($proc.ExitCode) - provo altro metodo" "Yellow"
+                        Write-Log "    [!] Exit code: $($proc.ExitCode) - trying another method" "Yellow"
                     }
                 }
 
-                # Metodo 2: setup.exe con parametri corretti per tipo
+                # Method 2: setup.exe with correct parameters by type
                 if ($setup -and !$installed) {
-                    Write-Log "    Eseguo: $($setup.Name)" "Cyan"
+                    Write-Log "    Running: $($setup.Name)" "Cyan"
 
-                    # Intel Graphics Installer usa --silent
+                    # Intel Graphics Installer uses --silent
                     if ($setup.Name -match "Installer\.exe" -and ($name -match "vga|graphics|intel.*graph")) {
                         $proc = Start-Process $setup.FullName -ArgumentList "--silent" -Wait -PassThru 2>$null
                     }
-                    # Intel SerialIO usa -s -overwrite
+                    # Intel SerialIO uses -s -overwrite
                     elseif ($setup.Name -match "SetupSerialIO") {
                         $proc = Start-Process $setup.FullName -ArgumentList "-s","-overwrite" -Wait -PassThru 2>$null
                     }
-                    # Intel ME usa -s -overwrite
+                    # Intel ME uses -s -overwrite
                     elseif ($setup.Name -match "SetupME") {
                         $proc = Start-Process $setup.FullName -ArgumentList "-s","-overwrite" -Wait -PassThru 2>$null
                     }
-                    # Intel Chipset usa -s -overwrite
+                    # Intel Chipset uses -s -overwrite
                     elseif ($setup.Name -match "SetupChipset") {
                         $proc = Start-Process $setup.FullName -ArgumentList "-s","-overwrite" -Wait -PassThru 2>$null
                     }
-                    # Realtek Audio usa -s
+                    # Realtek Audio uses -s
                     elseif ($setup.Name -match "setup\.exe" -and ($name -match "audio|realtek|sound")) {
                         $proc = Start-Process $setup.FullName -ArgumentList "-s" -Wait -PassThru 2>$null
                     }
@@ -1194,17 +1195,17 @@ if ($SkipInstall) {
                     }
 
                     if ($proc.ExitCode -eq 0 -or $proc.ExitCode -eq 3010) {
-                        Write-Log "    [OK] Installato" "Green"
+                        Write-Log "    [OK] Installed" "Green"
                         $installed = $true
                     } elseif ($proc.ExitCode -eq 1603) {
-                        Write-Log "    [!] Exit code: 1603 (driver in uso) - installo INF forzato" "Yellow"
-                        # Non marcare come installato, passerà al metodo 3
+                        Write-Log "    [!] Exit code: 1603 (driver in use) - forcing INF install" "Yellow"
+                        # Don't mark as installed, will fall through to method 3
                     } else {
                         Write-Log "    [!] Exit code: $($proc.ExitCode)" "Yellow"
                     }
                 }
 
-                # Metodo 3: Installa INF manualmente (con force)
+                # Method 3: Install INF manually (with force)
                 if (!$installed) {
                     $infs = Get-ChildItem "$dest" -Filter "*.inf" -Recurse 2>$null
                     $infCount = 0
@@ -1212,171 +1213,171 @@ if ($SkipInstall) {
                         # Skip GNA
                         if ($inf.Name -match "gna") { continue }
 
-                        # Usa /force per sovrascrivere driver esistenti
+                        # Use /force to overwrite existing drivers
                         $result = pnputil /add-driver $inf.FullName /install /force 2>&1 | Out-String
                         if ($result -match "success|pubblicato|aggiunto|added|già presente|already exists") {
                             $infCount++
                         }
                     }
                     if ($infCount -gt 0) {
-                        Write-Log "    [OK] Installati $infCount INF" "Green"
+                        Write-Log "    [OK] Installed $infCount INFs" "Green"
                         $installed = $true
                     }
                 }
 
                 if (!$installed) {
-                    Write-Log "    [!] Nessun installer trovato - installa manualmente" "Yellow"
+                    Write-Log "    [!] No installer found - install manually" "Yellow"
                 }
 
-                # Segna se abbiamo installato driver DPTF (per mostrare prompt GPU dopo)
+                # Mark if we installed DPTF driver (to show GPU prompt after)
                 if ($installed -and ($name -match "dptf|dtt|thermal")) {
                     $dptfInstalled = $true
                 }
             }
         }
 
-        # Se non c'era DPTF ma c'è VGA Intel da installare, mostra comunque il prompt GPU
+        # If there was no DPTF but there's an Intel VGA to install, show the GPU prompt anyway
         if (!$gpuPromptShown -and $vgaIntelZip) {
             Write-Host ""
             Write-Host "  ============================================================" -ForegroundColor Cyan
-            Write-Host "  >>> INSTALLA ORA IL DRIVER VGA INTEL <<<" -ForegroundColor Cyan
+            Write-Host "  >>> INSTALL THE INTEL VGA DRIVER NOW <<<" -ForegroundColor Cyan
             Write-Host "  ============================================================" -ForegroundColor Cyan
             Write-Host ""
-            Write-Host "  Il driver VGA Intel richiede installazione manuale" -ForegroundColor White
-            Write-Host "  (l'installer automatico ha un bug con Parade MUX)" -ForegroundColor Gray
+            Write-Host "  The Intel VGA driver requires manual installation" -ForegroundColor White
+            Write-Host "  (the automatic installer has a Parade MUX bug)" -ForegroundColor Gray
             Write-Host ""
-            Write-Host "  PROCEDURA:" -ForegroundColor Yellow
-            Write-Host "  1. Apri: $($vgaIntelZip.FullName)" -ForegroundColor White
-            Write-Host "  2. Estrai il contenuto in una cartella" -ForegroundColor White
-            Write-Host "  3. Apri Device Manager (Win+X -> Device Manager)" -ForegroundColor White
-            Write-Host "  4. Espandi 'Display adapters'" -ForegroundColor White
-            Write-Host "  5. Click destro su 'Intel UHD Graphics' -> 'Update driver'" -ForegroundColor White
+            Write-Host "  PROCEDURE:" -ForegroundColor Yellow
+            Write-Host "  1. Open: $($vgaIntelZip.FullName)" -ForegroundColor White
+            Write-Host "  2. Extract the contents to a folder" -ForegroundColor White
+            Write-Host "  3. Open Device Manager (Win+X -> Device Manager)" -ForegroundColor White
+            Write-Host "  4. Expand 'Display adapters'" -ForegroundColor White
+            Write-Host "  5. Right-click on 'Intel UHD Graphics' -> 'Update driver'" -ForegroundColor White
             Write-Host "  6. 'Browse my computer for drivers'" -ForegroundColor White
-            Write-Host "  7. Seleziona la cartella estratta -> Next" -ForegroundColor White
+            Write-Host "  7. Select the extracted folder -> Next" -ForegroundColor White
             Write-Host ""
             Write-Host "  ============================================================" -ForegroundColor Cyan
             Write-Host ""
 
             if (!$DryRun) {
-                $response = Read-Host "  Premi INVIO dopo aver installato VGA Intel (o 'S' per saltare)"
+                $response = Read-Host "  Press ENTER after installing Intel VGA (or 'S' to skip)"
                 if ($response -ne 'S' -and $response -ne 's') {
-                    Write-Log "  VGA Intel installato dall'utente" "Green"
+                    Write-Log "  Intel VGA installed by user" "Green"
                 } else {
-                    Write-Log "  VGA Intel saltato" "Yellow"
+                    Write-Log "  Intel VGA skipped" "Yellow"
                 }
             }
 
             Write-Host ""
             Write-Host "  ============================================================" -ForegroundColor Green
-            Write-Host "  >>> INSTALLA ORA I DRIVER NVIDIA <<<" -ForegroundColor Green
+            Write-Host "  >>> INSTALL NVIDIA DRIVERS NOW <<<" -ForegroundColor Green
             Write-Host "  ============================================================" -ForegroundColor Green
             Write-Host ""
-            Write-Host "  OPZIONE 1: GeForce Experience (consigliato)" -ForegroundColor Cyan
-            Write-Host "    - Scarica da: https://www.nvidia.com/geforce-experience/" -ForegroundColor Gray
+            Write-Host "  OPTION 1: GeForce Experience (recommended)" -ForegroundColor Cyan
+            Write-Host "    - Download from: https://www.nvidia.com/geforce-experience/" -ForegroundColor Gray
             Write-Host ""
-            Write-Host "  OPZIONE 2: Driver manuali" -ForegroundColor Cyan
-            Write-Host "    - Scarica da: https://www.nvidia.com/drivers/" -ForegroundColor Gray
+            Write-Host "  OPTION 2: Manual drivers" -ForegroundColor Cyan
+            Write-Host "    - Download from: https://www.nvidia.com/drivers/" -ForegroundColor Gray
             Write-Host ""
             Write-Host "  ============================================================" -ForegroundColor Green
             Write-Host ""
 
             if (!$DryRun) {
-                $response = Read-Host "  Premi INVIO dopo aver installato NVIDIA (o 'S' per saltare)"
+                $response = Read-Host "  Press ENTER after installing NVIDIA (or 'S' to skip)"
                 if ($response -ne 'S' -and $response -ne 's') {
-                    Write-Log "  NVIDIA installato dall'utente" "Green"
+                    Write-Log "  NVIDIA installed by user" "Green"
                 } else {
-                    Write-Log "  NVIDIA saltato" "Yellow"
+                    Write-Log "  NVIDIA skipped" "Yellow"
                 }
             }
         }
 
         Write-Host ""
-        Write-Log "  Installazione completata" "Green"
+        Write-Log "  Installation completed" "Green"
 
-        # Forza Windows a riesaminare i dispositivi e usare i nuovi driver
-        Write-Log "  Aggiorno dispositivi hardware..." "Yellow"
+        # Force Windows to re-examine devices and use the new drivers
+        Write-Log "  Updating hardware devices..." "Yellow"
 
-        # Metodo 1: pnputil rescan
+        # Method 1: pnputil rescan
         $rescan = pnputil /scan-devices 2>&1 | Out-String
         if ($rescan -match "completata|completed") {
-            Write-Log "  [OK] Scansione dispositivi completata" "Green"
+            Write-Log "  [OK] Device scan completed" "Green"
         }
 
-        # Metodo 2: Riavvia dispositivi critici per forzare caricamento nuovi driver
-        Write-Log "  Alcuni driver richiedono RIAVVIO per essere attivati" "Yellow"
+        # Method 2: Restart critical devices to force loading new drivers
+        Write-Log "  Some drivers require a REBOOT to be activated" "Yellow"
     }
 }
 Write-Host ""
 
 # ============================================================================
-# FASE 7: FINALIZZAZIONE
+# PHASE 7: FINALIZATION
 # ============================================================================
 
 Write-Host "==================================================================" -ForegroundColor Cyan
-Write-Host " [7/7] FINALIZZAZIONE" -ForegroundColor Cyan
+Write-Host " [7/7] FINALIZATION" -ForegroundColor Cyan
 Write-Host "==================================================================" -ForegroundColor Cyan
 
-# Genera script rollback
+# Generate rollback script
 $rollbackScript = @'
 #Requires -RunAsAdministrator
 # PHN16-72 Rollback v7.6
-# Ripristina le impostazioni originali
+# Restores original settings
 
 Write-Host "PHN16-72 Rollback" -ForegroundColor Yellow
 Write-Host ""
 
-# Ripristina intelppm
+# Restore intelppm
 $intelppmKey = "HKLM:\SYSTEM\CurrentControlSet\Services\intelppm"
 Set-ItemProperty -Path $intelppmKey -Name "Start" -Value 3 -Type DWord -EA 0
-Write-Host "Intel PPM: Start = 3 (ripristinato)" -ForegroundColor Yellow
+Write-Host "Intel PPM: Start = 3 (restored)" -ForegroundColor Yellow
 
-# Rimuovi blocchi Windows Update
+# Remove Windows Update blocks
 Remove-ItemProperty "HKLM:\SOFTWARE\Policies\Microsoft\Windows\WindowsUpdate" "ExcludeWUDriversInQualityUpdate" -EA 0
 Set-ItemProperty "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\DriverSearching" "SearchOrderConfig" -Value 1 -EA 0
 Remove-Item "HKLM:\SOFTWARE\Policies\Microsoft\Windows\DeviceInstall\Restrictions" -Recurse -EA 0
-Write-Host "Blocchi Windows Update: rimossi" -ForegroundColor Yellow
+Write-Host "Windows Update blocks: removed" -ForegroundColor Yellow
 
 Write-Host ""
-Write-Host "ATTENZIONE: Dopo il riavvio, Windows Update potrebbe" -ForegroundColor Red
-Write-Host "reinstallare i driver problematici!" -ForegroundColor Red
+Write-Host "WARNING: After rebooting, Windows Update may" -ForegroundColor Red
+Write-Host "reinstall the problematic drivers!" -ForegroundColor Red
 Write-Host ""
-Write-Host "Riavvia il PC per applicare le modifiche" -ForegroundColor Cyan
+Write-Host "Reboot the PC to apply the changes" -ForegroundColor Cyan
 '@
 
 $rollbackPath = "$env:USERPROFILE\Desktop\PHN16-72_ROLLBACK.ps1"
 $rollbackScript | Out-File $rollbackPath -Encoding ASCII
-Write-Log "  Script rollback: $rollbackPath" "Green"
+Write-Log "  Rollback script: $rollbackPath" "Green"
 
-# Riepilogo
+# Summary
 Write-Host ""
 Write-Host "==================================================================" -ForegroundColor Green
-Write-Host "                    SETUP COMPLETATO" -ForegroundColor Green
+Write-Host "                    SETUP COMPLETED" -ForegroundColor Green
 Write-Host "==================================================================" -ForegroundColor Green
-Write-Host "  FIX APPLICATI:" -ForegroundColor White
+Write-Host "  APPLIED FIXES:" -ForegroundColor White
 
 if ($DisableIntelppm -and $intelppmStatus -ne "DISABLED" -and !$DryRun) {
-    Write-Host "  [OK] Intel PPM disabilitato (fix CLOCK_WATCHDOG)" -ForegroundColor Green
+    Write-Host "  [OK] Intel PPM disabled (CLOCK_WATCHDOG fix)" -ForegroundColor Green
 }
 if ($Issues -contains "GNA") {
-    Write-Host "  [OK] GNA rimosso/bloccato" -ForegroundColor Green
+    Write-Host "  [OK] GNA removed/blocked" -ForegroundColor Green
 }
 if ($Issues -contains "KILLER_SW") {
-    Write-Host "  [OK] Killer SOFTWARE rimosso (driver WiFi mantenuto)" -ForegroundColor Green
+    Write-Host "  [OK] Killer SOFTWARE removed (WiFi driver kept)" -ForegroundColor Green
 }
-Write-Host "  [OK] Windows Update bloccato per driver problematici" -ForegroundColor Green
-Write-Host "  [OK] Driver esistenti rimossi e nuovi installati" -ForegroundColor Green
+Write-Host "  [OK] Windows Update blocked for problematic drivers" -ForegroundColor Green
+Write-Host "  [OK] Existing drivers removed and new ones installed" -ForegroundColor Green
 
 Write-Host "------------------------------------------------------------------" -ForegroundColor Green
-Write-Host "  PROSSIMI PASSI:" -ForegroundColor Yellow
-Write-Host "  1. *** RIAVVIA IL PC *** (OBBLIGATORIO!)" -ForegroundColor Red
-Write-Host "     I nuovi driver saranno attivi solo dopo il riavvio" -ForegroundColor Gray
-Write-Host "  2. Esegui: .\HeliosPHN16-72_Check.ps1" -ForegroundColor Yellow
+Write-Host "  NEXT STEPS:" -ForegroundColor Yellow
+Write-Host "  1. *** REBOOT THE PC *** (MANDATORY!)" -ForegroundColor Red
+Write-Host "     New drivers will only be active after reboot" -ForegroundColor Gray
+Write-Host "  2. Run: .\HeliosPHN16-72_Check.ps1" -ForegroundColor Yellow
 Write-Host "------------------------------------------------------------------" -ForegroundColor Green
-Write-Host "  FILE GENERATI:" -ForegroundColor White
+Write-Host "  GENERATED FILES:" -ForegroundColor White
 Write-Host "  - $LogFile" -ForegroundColor Gray
 Write-Host "  - $rollbackPath" -ForegroundColor Gray
 Write-Host "  - $DownloadPath\GUIDA_DRIVER.html" -ForegroundColor Gray
 Write-Host "==================================================================" -ForegroundColor Green
 Write-Host ""
 
-Write-Log "Script completato"
+Write-Log "Script completed"
